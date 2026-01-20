@@ -229,8 +229,8 @@ class DynamoDBService:
                 Bucket=self.s3_bucket_name,
                 Key=s3_key,
                 Body=pdf_bytes,
-                ContentType='application/pdf',
-                ACL='private' # Ensure objects are private by default
+                ContentType='application/pdf'
+                # ACL='private' removed as it conflicts with 'Bucket owner enforced' setting
             )
             s3_url = f"https://{self.s3_bucket_name}.s3.{settings.AWS_REGION}.amazonaws.com/{s3_key}"
             return s3_url
