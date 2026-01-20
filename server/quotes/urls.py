@@ -1,0 +1,28 @@
+from django.urls import path
+from .views import (
+    ProductFamilyListView, MasterItemListView, QuotationCreateView,
+    ProductFamilyDetailView, MasterItemDetailView,
+    QuotationGeneratePDFView, QuotationPresignedURLView,
+    UserQuotationListView, ProductListView, ProductDetailView, ProductListByFamilyView
+)
+
+urlpatterns = [
+    # Product Family Endpoints
+    path('families/', ProductFamilyListView.as_view(), name='family-list'),
+    path('families/<str:category>/<uuid:family_id>/', ProductFamilyDetailView.as_view(), name='family-detail'),
+    path('families/<str:category>/<uuid:family_id>/products/', ProductListByFamilyView.as_view(), name='product-list-by-family'),
+
+    # Product Endpoints
+    path('products/', ProductListView.as_view(), name='product-list'),
+    path('products/<uuid:product_id>/', ProductDetailView.as_view(), name='product-detail'),
+
+    # Master Item Endpoints
+    path('items/', MasterItemListView.as_view(), name='item-list'),
+    path('items/<str:category>/<uuid:item_id>/', MasterItemDetailView.as_view(), name='item-detail'),
+
+    # Quotation Endpoints
+    path('create/', QuotationCreateView.as_view(), name='quotation-create'),
+    path('mine/', UserQuotationListView.as_view(), name='user-quotation-list'), # New URL
+    path('<str:quote_id>/generate-pdf/', QuotationGeneratePDFView.as_view(), name='quotation-generate-pdf'),
+    path('<str:quote_id>/presigned-url/', QuotationPresignedURLView.as_view(), name='quotation-presigned-url'),
+]
