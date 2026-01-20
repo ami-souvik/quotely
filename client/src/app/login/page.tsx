@@ -3,7 +3,7 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
-import api, { useAuthStore } from '@//lib/api/client';
+import api, { useAuthStore } from '@/lib/api/client';
 import { ArrowRight } from 'lucide-react';
 
 const LoginPage: React.FC = () => {
@@ -21,7 +21,7 @@ const LoginPage: React.FC = () => {
       const { access, refresh, user } = response.data;
       setTokens(access, refresh);
       setUser(user);
-      router.push('/');
+      router.push('/quotes');
     } catch (error: any) {
       setError("root.serverError", {
         type: "manual",

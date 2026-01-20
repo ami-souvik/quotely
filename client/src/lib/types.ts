@@ -18,31 +18,29 @@ export interface Product {
 }
 
 export interface QuoteItem {
-    id: string;
-    name: string;
-    qty: number;
-    unit_price: number;
-    unit_type: string;
-    total: number;
+  id: string;
+  name: string;
+  qty: number;
+  unit_price: number;
+  unit_type: string;
+  total: number;
 }
 
 export interface QuoteFamily {
-    family_id: string;
-    family_name: string;
-    category: string;
-    items: QuoteItem[];
-    subtotal: number;
-    margin_applied: number;
+  family_id: string;
+  family_name: string;
+  category: string;
+  items: QuoteItem[];
+  subtotal: number;
+  margin_applied: number;
 }
 
 export interface AuthUser {
-    id: string;
-    email: string;
-    first_name: string;
-    last_name: string;
-    role: 'ADMIN' | 'EMPLOYEE';
-    organization: {
-        id: string;
-        name: string;
-    };
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: 'ADMIN' | 'EMPLOYEE';
+  org_id: string;
+  org_name: string;
 }

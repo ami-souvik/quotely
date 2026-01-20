@@ -1,34 +1,47 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import api, { useAuthStore } from '@/lib/api/client';
-import { QuoteFamily, QuoteItem, ProductFamilySerializer, Product } from '@/lib/types';
+import { QuoteFamily, QuoteItem } from '@/lib/types';
 import { getProductsByFamily } from '@/lib/api/products';
+import { getQuote, updateQuote } from '@/lib/api/quotes';
+import { CirclePlus, Loader2, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
-const QuoteEditorPage: React.FC = () => {
+const QuoteEditorContent: React.FC = () => {
   const router = useRouter();
-  const { user, selectedProductFamilies } = useAuthStore(); // Get selected families from store
+  const searchParams = useSearchParams();
+  const quoteId = searchParams.get('id');
+  const { user, selectedProductFamilies } = useAuthStore();
   const [quoteFamilies, setQuoteFamilies] = useState<QuoteFamily[]>([]);
   const [customerName, setCustomerName] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
-    const initializeQuote = async () => {
-      if (selectedProductFamilies.length > 0) {
-        setLoading(true);
-        try {
+    const initialize = async () => {
+      setIsInitializing(true);
+      try {
+        if (quoteId) {
+          // Editing existing quote
+          const quote = await getQuote(quoteId);
+          const details = quote.snapshot as any || quote;
+          setCustomerName(details.customer_name);
+          setQuoteFamilies(details.families || []);
+        } else if (selectedProductFamilies.length > 0) {
+          // Creating new quote from selection
           const familiesWithProducts = await Promise.all(
             selectedProductFamilies.map(async (family) => {
               const products = await getProductsByFamily(family);
               const items: QuoteItem[] = products.map(product => ({
                 id: product.id,
                 name: product.name,
-                qty: 1, // Default quantity
+                qty: 1,
                 unit_price: product.price,
-                unit_type: 'unit', // Or some default/derived value
-                total: product.price, // Initial total
+                unit_type: 'unit',
+                total: product.price,
               }));
 
               const subtotal = items.reduce((acc, item) => acc + (item.qty * item.unit_price), 0);
@@ -44,19 +57,19 @@ const QuoteEditorPage: React.FC = () => {
             })
           );
           setQuoteFamilies(familiesWithProducts);
-        } catch (err) {
-          setError('Failed to load products for families.');
-          console.error(err);
-        } finally {
-          setLoading(false);
+        } else {
+          // No selection and no ID, redirect to new
+          // router.push('/quotes/new');
         }
-      } else {
-        router.push('/quotes/new');
+      } catch (err: any) {
+        setError(err.message || 'Failed to initialize quote editor.');
+      } finally {
+        setIsInitializing(false);
       }
     };
 
-    initializeQuote();
-  }, [selectedProductFamilies, router]);
+    initialize();
+  }, [quoteId, selectedProductFamilies, router]);
 
   const calculateFamilySubtotal = useCallback((family: QuoteFamily) => {
     let subtotal = 0;
@@ -70,53 +83,67 @@ const QuoteEditorPage: React.FC = () => {
     let grandTotal = 0;
     quoteFamilies.forEach(family => {
       let subtotal = calculateFamilySubtotal(family);
-      grandTotal += subtotal * (1 + family.margin_applied); // Apply margin
+      grandTotal += subtotal * (1 + family.margin_applied);
     });
-    // Add tax later if needed
     return grandTotal;
   }, [quoteFamilies, calculateFamilySubtotal]);
 
+  // Update family subtotals when items change
   useEffect(() => {
-    // Recalculate subtotals when quoteFamilies change
-    // setQuoteFamilies(prevFamilies => prevFamilies.map(family => ({
-    //   ...family,
-    //   subtotal: calculateFamilySubtotal(family)
-    // })));
-  }, [quoteFamilies, calculateFamilySubtotal]);
+    setQuoteFamilies(currentFamilies =>
+      currentFamilies.map(f => ({
+        ...f,
+        subtotal: calculateFamilySubtotal(f)
+      }))
+    );
+  }, [JSON.stringify(quoteFamilies.map(f => f.items))]); // Deep dependency check simplifed
 
 
   const handleItemChange = (familyIndex: number, itemIndex: number, field: string, value: any) => {
-    setQuoteFamilies(prevFamilies => {
-      const newFamilies = [...prevFamilies];
-      const newItem = { ...newFamilies[familyIndex].items[itemIndex], [field]: value };
-      newItem.total = newItem.qty * newItem.unit_price; // Recalculate item total
-      newFamilies[familyIndex].items[itemIndex] = newItem;
-      return newFamilies;
-    });
+    setQuoteFamilies(prevFamilies =>
+      prevFamilies.map((family, fIdx) => {
+        if (fIdx !== familyIndex) return family;
+        const newItems = [...family.items];
+        const newItem = { ...newItems[itemIndex], [field]: value };
+        newItem.total = newItem.qty * newItem.unit_price;
+        newItems[itemIndex] = newItem;
+        return { ...family, items: newItems };
+      })
+    );
   };
 
   const handleAddItem = (familyIndex: number) => {
-    setQuoteFamilies(prevFamilies => {
-      const newFamilies = [...prevFamilies];
-      const newItem: QuoteItem = {
-        id: String(Math.random()),
-        name: 'New Custom Item',
-        qty: 1,
-        unit_price: 0,
-        unit_type: 'unit',
-        total: 0,
-      };
-      newFamilies[familyIndex].items.push(newItem);
-      return newFamilies;
-    });
+    const newItem: QuoteItem = {
+      id: String(Math.random()),
+      name: 'New Custom Item',
+      qty: 1,
+      unit_price: 0,
+      unit_type: 'unit',
+      total: 0,
+    };
+    setQuoteFamilies(prevFamilies =>
+      prevFamilies.map((family, fIdx) => {
+        if (fIdx !== familyIndex) return family;
+        return { ...family, items: [...family.items, newItem] };
+      })
+    );
   };
 
   const handleRemoveItem = (familyIndex: number, itemIndex: number) => {
-    setQuoteFamilies(prevFamilies => {
-      const newFamilies = [...prevFamilies];
-      newFamilies[familyIndex].items.splice(itemIndex, 1);
-      return newFamilies;
-    });
+    setQuoteFamilies(prevFamilies =>
+      prevFamilies.map((family, fIdx) => {
+        if (fIdx !== familyIndex) return family;
+        const newItems = [...family.items];
+        newItems.splice(itemIndex, 1);
+        return { ...family, items: newItems };
+      })
+    );
+  };
+
+  const handleRemoveFamily = (familyIndex: number) => {
+    if (window.confirm('Are you sure you want to remove this family and all its items?')) {
+      setQuoteFamilies(prevFamilies => prevFamilies.filter((_, index) => index !== familyIndex));
+    }
   };
 
   const handleSaveQuote = async () => {
@@ -138,13 +165,18 @@ const QuoteEditorPage: React.FC = () => {
         margin_applied: family.margin_applied,
       })),
       total_amount: calculateGrandTotal(),
-      created_by_user_id: user.username, // Pass username as user ID
+      created_by_user_id: user.id,
     };
 
     try {
-      const response = await api.post('/quotes/create/', quoteData);
-      alert(`Quote saved successfully! Quote ID: ${response.data.quote_id}`);
-      router.push('/'); // Go back to dashboard
+      if (quoteId) {
+        await updateQuote(quoteId, quoteData);
+        alert('Quote updated successfully!');
+      } else {
+        const response = await api.post('/quotes/create/', quoteData);
+        alert(`Quote saved successfully! Quote ID: ${response.data.quote_id}`);
+      }
+      router.push('/');
     } catch (err: any) {
       console.error('Failed to save quote:', err.response?.data || err.message);
       setError(err.response?.data?.error || 'Failed to save quote.');
@@ -153,14 +185,17 @@ const QuoteEditorPage: React.FC = () => {
     }
   };
 
+  if (isInitializing) {
+    return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin h-8 w-8" /></div>
+  }
 
   return (
     <div className="min-h-screen">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">Quote Editor</h1>
+      <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">{quoteId ? 'Edit Quote' : 'New Quote'}</h1>
 
       {error && <div className="text-red-500 text-center mb-4">{error}</div>}
 
-      <div className="max-w-4xl mx-auto">
+      <div className="w-full md:max-w-4xl mx-auto">
         <div className="mb-4">
           <label htmlFor="customerName" className="block text-gray-700 text-sm font-bold mb-2">
             Customer Name:
@@ -174,95 +209,114 @@ const QuoteEditorPage: React.FC = () => {
             placeholder="Enter customer name"
           />
         </div>
-
         {quoteFamilies.map((family, familyIndex) => (
-          <div key={family.family_id} className="mb-4">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-4">{family.family_name} ({family.category})</h2>
-
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Price</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Type</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                  <th scope="col" className="relative px-6 py-3"><span className="sr-only">Edit</span></th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {family.items.map((item, itemIndex) => (
-                  <tr key={item.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <input
-                        type="text"
-                        className="w-full border-none focus:ring-0"
-                        value={item.name}
-                        onChange={(e) => handleItemChange(familyIndex, itemIndex, 'name', e.target.value)}
-                      />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <input
-                        type="number"
-                        className="w-20 border-none focus:ring-0"
-                        value={item.qty}
-                        onChange={(e) => handleItemChange(familyIndex, itemIndex, 'qty', parseFloat(e.target.value))}
-                      />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <input
-                        type="number"
-                        step="0.01"
-                        className="w-24 border-none focus:ring-0"
-                        value={item.unit_price}
-                        onChange={(e) => handleItemChange(familyIndex, itemIndex, 'unit_price', parseFloat(e.target.value))}
-                      />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <input
-                        type="text"
-                        className="w-24 border-none focus:ring-0"
-                        value={item.unit_type}
-                        onChange={(e) => handleItemChange(familyIndex, itemIndex, 'unit_type', e.target.value)}
-                      />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">INR {Number(item.total)?.toFixed(2)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => handleRemoveItem(familyIndex, itemIndex)}
-                        className="text-red-600 hover:text-red-900 ml-4"
-                      >
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="mt-4 flex justify-between items-center">
-              <button
-                onClick={() => handleAddItem(familyIndex)}
-                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+          <div key={`${family.family_id}-${familyIndex}`} className="border-t bg-white relative">
+            <div className="flex justify-between items-start md:items-center p-2">
+              <h2 className="w-full text-xl md:text-2xl font-semibold text-gray-800">{family.family_name} ({family.category})</h2>
+              <Button variant="ghost" onClick={() => handleRemoveFamily(familyIndex)} className="text-red-500 hover:text-red-700 hover:bg-red-50">
+                <Trash2 />
+                <span className='sr-only'>Remove Family</span>
+              </Button>
+              <Button variant="ghost" onClick={() => handleAddItem(familyIndex)} className="text-green-500 hover:text-green-700 hover:bg-green-50"
+                type="button"
               >
-                Add Custom Item
-              </button>
-              <span className="text-lg font-bold">Family Subtotal: INR {family.subtotal.toFixed(2)}</span>
+                <CirclePlus />
+                <span className='sr-only'>Add Custom Item</span>
+              </Button>
+            </div>
+            <div className="overflow-x-scroll"
+              style={{
+                width: "calc(100vw - (var(--spacing) * 8))"
+              }}>
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th scope="col" className="p-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[100px]">Item</th>
+                    <th scope="col" className="p-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[36px]">Qty</th>
+                    <th scope="col" className="p-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[80px]">Price</th>
+                    <th scope="col" className="p-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[40px]">Unit Type</th>
+                    <th scope="col" className="p-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[80px] sticky right-[36px] bg-gray-100 z-10">Total</th>
+                    <th scope="col" className="relative p-2 md:px-6 md:py-3 min-w-[36px] sticky right-0 bg-gray-100 z-10"><span className="sr-only">Action</span></th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {family.items.map((item, itemIndex) => (
+                    <tr key={item.id}>
+                      <td className="border md:px-6 md:py-4 whitespace-nowrap">
+                        <input
+                          type="text"
+                          className="w-full border-0 px-2 py-1 text-xs focus:ring-primary focus:border-primary"
+                          value={item.name}
+                          onChange={(e) => handleItemChange(familyIndex, itemIndex, 'name', e.target.value)}
+                        />
+                      </td>
+                      <td className="border md:px-6 md:py-4 whitespace-nowrap">
+                        <input
+                          type="number"
+                          className="w-full border-0 px-2 py-1 text-xs focus:ring-primary focus:border-primary"
+                          value={item.qty}
+                          onChange={(e) => handleItemChange(familyIndex, itemIndex, 'qty', parseFloat(e.target.value))}
+                        />
+                      </td>
+                      <td className="border md:px-6 md:py-4 whitespace-nowrap">
+                        <input
+                          type="number"
+                          step="0.01"
+                          className="w-full border-0 px-2 py-1 text-xs focus:ring-primary focus:border-primary"
+                          value={item.unit_price}
+                          onChange={(e) => handleItemChange(familyIndex, itemIndex, 'unit_price', parseFloat(e.target.value))}
+                        />
+                      </td>
+                      <td className="border md:px-6 md:py-4 whitespace-nowrap">
+                        <input
+                          type="text"
+                          className="w-full border-0 px-2 py-1 text-xs focus:ring-primary focus:border-primary"
+                          value={item.unit_type}
+                          onChange={(e) => handleItemChange(familyIndex, itemIndex, 'unit_type', e.target.value)}
+                        />
+                      </td>
+                      <td className="md:px-6 md:py-4 whitespace-nowrap text-right text-xs min-w-[80px] sticky right-[36px] bg-gray-100 z-10">{Number(item.total)?.toFixed(2)}</td>
+                      <td className="md:px-6 md:py-4 whitespace-nowrap text-right text-xs font-medium min-w-[36px] sticky right-0 bg-gray-100 z-10">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveItem(familyIndex, itemIndex)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-between items-center p-2">
+              <span className="font-bold">Subtotal:</span>
+              <span className="font-bold">{family.subtotal.toFixed(2)}</span>
             </div>
           </div>
         ))}
-
-        <div className="mt-8 pt-4 border-t-2 border-gray-200 flex justify-between items-center">
+        <div className="mt-8 pt-4 border-t-2 border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4 pb-20 md:pb-0">
           <h3 className="text-2xl font-bold text-gray-800">Grand Total: INR {calculateGrandTotal().toFixed(2)}</h3>
           <button
             onClick={handleSaveQuote}
             disabled={loading}
-            className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md text-lg disabled:opacity-50"
+            className="w-full md:w-auto px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md text-lg disabled:opacity-50"
           >
-            {loading ? 'Saving...' : 'Save Quote'}
+            {loading ? 'Saving...' : (quoteId ? 'Update Quote' : 'Save Quote')}
           </button>
         </div>
       </div>
     </div>
+  );
+};
+
+const QuoteEditorPage: React.FC = () => {
+  return (
+    <Suspense fallback={<div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>}>
+      <QuoteEditorContent />
+    </Suspense>
   );
 };
 

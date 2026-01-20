@@ -34,16 +34,28 @@ class DynamoDBService:
         )
         self.s3_bucket_name = settings.AWS_S3_BUCKET_NAME
 
+    def _convert_floats_to_decimals(self, obj):
+        if isinstance(obj, list):
+            return [self._convert_floats_to_decimals(i) for i in obj]
+        elif isinstance(obj, dict):
+            return {k: self._convert_floats_to_decimals(v) for k, v in obj.items()}
+        elif isinstance(obj, float):
+            return Decimal(str(obj))
+        return obj
+
     def create_quotation(self, org_id, user_id, data):
         quote_uuid = uuid.uuid4()
         quote_id = str(quote_uuid)
+        # Sanitise data to convert floats to Decimals for DynamoDB
+        sanitized_data = self._convert_floats_to_decimals(data)
+        
         item = {
             'PK': f"ORG#{org_id}",
             'SK': f"QUOTE#{quote_id}",
             'type': 'QUOTATION',
             'created_by': str(user_id),
             'status': 'DRAFT', # Default status
-            'snapshot': data,  # Full JSON snapshot of the quote
+            'snapshot': sanitized_data,  # Full JSON snapshot of the quote
             'customer_name': data.get('customer_name', ''),
             'total_amount': Decimal(str(data.get('total_amount', 0.0))),
             'created_at': datetime.datetime.now().isoformat(),
@@ -70,6 +82,51 @@ class DynamoDBService:
         except ClientError as e:
             print(f"Error getting quotation: {e.response['Error']['Message']}")
             return None
+
+    def update_quotation(self, org_id, quote_id, data):
+        try:
+            # Sanitise data to convert floats to Decimals for DynamoDB
+            sanitized_data = self._convert_floats_to_decimals(data)
+            
+            # We update the main fields and the snapshot
+            update_expression = "SET customer_name = :cn, total_amount = :ta, snapshot = :ss, #s = :status"
+            expression_attribute_names = {
+                '#s': 'status'
+            }
+            expression_attribute_values = {
+                ':cn': data.get('customer_name'),
+                ':ta': Decimal(str(data.get('total_amount', 0.0))),
+                ':ss': sanitized_data,
+                ':status': 'DRAFT' # Reset to DRAFT on edit? Or keep current? Let's assume DRAFT for now as it's modified.
+            }
+            
+            response = self.table.update_item(
+                Key={
+                    'PK': f"ORG#{org_id}",
+                    'SK': f"QUOTE#{quote_id}"
+                },
+                UpdateExpression=update_expression,
+                ExpressionAttributeNames=expression_attribute_names,
+                ExpressionAttributeValues=expression_attribute_values,
+                ReturnValues="ALL_NEW"
+            )
+            return response.get('Attributes')
+        except ClientError as e:
+            print(f"Error updating quotation: {e.response['Error']['Message']}")
+            return None
+
+    def delete_quotation(self, org_id, quote_id):
+        try:
+            self.table.delete_item(
+                Key={
+                    'PK': f"ORG#{org_id}",
+                    'SK': f"QUOTE#{quote_id}"
+                }
+            )
+            return True
+        except ClientError as e:
+            print(f"Error deleting quotation: {e.response['Error']['Message']}")
+            return False
 
     def update_quotation_s3_link(self, org_id, quote_id, s3_pdf_link):
         try:
@@ -201,7 +258,7 @@ class DynamoDBService:
                 IndexName='User-Date-Index', # Make sure this GSI is created in DynamoDB
                 KeyConditionExpression='GSI1PK = :gsi_pk',
                 # Further filter by main PK to ensure it's for the specific organization
-                FilterExpression='begins_with(PK, :org_pk)',
+                FilterExpression='PK = :org_pk',
                 ExpressionAttributeValues={
                     ':gsi_pk': f"USER#{user_id}",
                     ':org_pk': f"ORG#{org_id}"

@@ -9,7 +9,6 @@ class ProductFamilySerializer(serializers.Serializer):
     base_margin = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, default=0.00)
 
     def get_id(self, obj):
-        print(obj)
         sk = obj.get('SK', '')
         try:
             return sk.split('#')[-1]

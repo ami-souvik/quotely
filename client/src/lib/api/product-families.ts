@@ -11,8 +11,9 @@ export const createProductFamily = async (data: Omit<ProductFamilySerializer, 'i
   return response.data;
 };
 
-export const updateProductFamily = async (id: string, data: ProductFamilySerializer): Promise<ProductFamilySerializer> => {
-  const response = await api.put(`/quotes/families/${id}/`, data);
+export const updateProductFamily = async ({ id, category }: { id: string, category: string },
+  data: ProductFamilySerializer): Promise<ProductFamilySerializer> => {
+  const response = await api.put(`/quotes/families/${category}/${id}/`, data);
   return response.data;
 };
 

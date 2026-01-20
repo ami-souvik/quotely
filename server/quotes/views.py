@@ -155,6 +155,44 @@ class QuotationCreateView(APIView):
             return Response({"error": "Quote created but failed to retrieve"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         return Response({"error": "Failed to create quotation"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class QuotationDetailView(APIView):
+    def get(self, request, quote_id):
+        service = DynamoDBService()
+        org_id = request.organization.id if request.organization else None
+        
+        if not org_id:
+            return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        quote = service.get_quotation(org_id, quote_id)
+        if quote:
+            return Response(quote)
+        return Response({"error": "Quotation not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    def put(self, request, quote_id):
+        service = DynamoDBService()
+        org_id = request.organization.id if request.organization else None
+        
+        if not org_id:
+            return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # We might want to validate the data similar to create.
+        # For now, passing request.data directly to service which expects similar structure to create.
+        updated_quote = service.update_quotation(org_id, quote_id, request.data)
+        if updated_quote:
+            return Response(updated_quote)
+        return Response({"error": "Failed to update quotation"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def delete(self, request, quote_id):
+        service = DynamoDBService()
+        org_id = request.organization.id if request.organization else None
+        
+        if not org_id:
+            return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if service.delete_quotation(org_id, quote_id):
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({"error": "Failed to delete quotation"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 class QuotationGeneratePDFView(APIView):
     def post(self, request, quote_id):
         service = DynamoDBService()

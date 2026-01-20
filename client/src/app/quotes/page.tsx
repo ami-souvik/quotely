@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
 import { createProduct, deleteProduct, getProducts, getProductsByFamily, updateProduct } from '@/lib/api/products';
+import { deleteQuote } from '@/lib/api/quotes';
 import { Product } from '@/lib/types';
 
 // Interfaces
@@ -221,7 +222,7 @@ const DashboardPage: React.FC = () => {
 
     try {
       if (currentFamily) {
-        const updatedFamily = await updateProductFamily(currentFamily.id, {
+        const updatedFamily = await updateProductFamily(currentFamily, {
           ...currentFamily,
           ...data,
           default_items: currentFamily.default_items || [], // Ensure default_items is not undefined
@@ -237,6 +238,18 @@ const DashboardPage: React.FC = () => {
       setIsFormOpen(false);
     } catch (err) {
       setError('Failed to save product family.');
+    }
+  };
+
+  const handleQuoteDelete = async (sk: string) => {
+    if (window.confirm('Are you sure you want to delete this quote?')) {
+      const quoteId = sk.split('#')[1];
+      try {
+        await deleteQuote(quoteId);
+        setQuotes(quotes.filter(q => q.SK !== sk));
+      } catch (err) {
+        setError('Failed to delete quote.');
+      }
     }
   };
 
@@ -259,19 +272,22 @@ const DashboardPage: React.FC = () => {
           ) : quotes.length > 0 ? (
             quotes.map(quote => (
               <Card key={quote.SK}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0">
                   <CardTitle className="text-sm font-medium">{quote.customer_name}</CardTitle>
                   <Badge variant={quote.status === 'DRAFT' ? 'outline' : 'default'}>{quote.status}</Badge>
                 </CardHeader>
-                <CardContent>
+                <CardContent className='px-4'>
                   <div className="text-2xl font-bold">INR {quote.total_amount.toFixed(2)}</div>
                   <p className="text-xs text-muted-foreground">
                     Created on {new Date(quote.created_at).toLocaleDateString()}
                   </p>
                 </CardContent>
-                <CardFooter>
-                  <Button className="w-full">
-                    View Quote
+                <CardFooter className="flex justify-between gap-2">
+                  <Button variant="outline" onClick={() => router.push(`/quotes/${quote.SK.split('#')[1]}`)}>
+                    View
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleQuoteDelete(quote.SK)} className="text-red-500 hover:text-red-700 hover:bg-red-50">
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </CardFooter>
               </Card>

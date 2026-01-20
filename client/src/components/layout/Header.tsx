@@ -97,7 +97,7 @@ export function Header() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>{user?.username}</DropdownMenuLabel>
+          <DropdownMenuLabel>{user?.email}</DropdownMenuLabel>
           <DropdownMenuItem>Settings</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuSub>

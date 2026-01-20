@@ -3,7 +3,8 @@ from .views import (
     ProductFamilyListView, MasterItemListView, QuotationCreateView,
     ProductFamilyDetailView, MasterItemDetailView,
     QuotationGeneratePDFView, QuotationPresignedURLView,
-    UserQuotationListView, ProductListView, ProductDetailView, ProductListByFamilyView
+    UserQuotationListView, ProductListView, ProductDetailView, ProductListByFamilyView,
+    QuotationDetailView
 )
 
 urlpatterns = [
@@ -23,6 +24,7 @@ urlpatterns = [
     # Quotation Endpoints
     path('create/', QuotationCreateView.as_view(), name='quotation-create'),
     path('mine/', UserQuotationListView.as_view(), name='user-quotation-list'), # New URL
+    path('<str:quote_id>/', QuotationDetailView.as_view(), name='quotation-detail'),
     path('<str:quote_id>/generate-pdf/', QuotationGeneratePDFView.as_view(), name='quotation-generate-pdf'),
     path('<str:quote_id>/presigned-url/', QuotationPresignedURLView.as_view(), name='quotation-presigned-url'),
 ]

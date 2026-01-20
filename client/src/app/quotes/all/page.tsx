@@ -2,78 +2,198 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import api, { useAuthStore } from '@/lib/api/client';
-import { ProductFamilySerializer } from '@/lib/types';
+import { getQuotes, deleteQuote, Quote } from '@/lib/api/quotes';
+import { Plus, Search, Eye, Edit, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 
-const NewQuotePage: React.FC = () => {
+const AllQuotesPage: React.FC = () => {
   const router = useRouter();
-  const [productFamilies, setProductFamilies] = useState<ProductFamilySerializer[]>([]);
-  const [selectedFamilies, setSelectedFamilies] = useState<ProductFamilySerializer[]>([]);
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [filteredQuotes, setFilteredQuotes] = useState<Quote[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { setProductFamiliesForQuote } = useAuthStore(); // Access the setter from store
+
+  const fetchQuotes = async () => {
+    try {
+      setLoading(true);
+      const data = await getQuotes();
+      setQuotes(data);
+      setFilteredQuotes(data);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch quotes.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchProductFamilies = async () => {
-      try {
-        const response = await api.get('/quotes/families/');
-        setProductFamilies(response.data);
-      } catch (err: any) {
-        setError(err.response?.data?.error || 'Failed to fetch product families.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProductFamilies();
+    fetchQuotes();
   }, []);
 
-  const handleFamilySelect = (family: ProductFamilySerializer) => {
-    setSelectedFamilies((prevSelected) =>
-      prevSelected.some((f) => f.id === family.id)
-        ? prevSelected.filter((f) => f.id !== family.id)
-        : [...prevSelected, family]
+  useEffect(() => {
+    const lowerQuery = searchQuery.toLowerCase();
+    const filtered = quotes.filter(
+      (quote) =>
+        quote.customer_name?.toLowerCase().includes(lowerQuery) ||
+        quote.status?.toLowerCase().includes(lowerQuery)
     );
-  };
+    setFilteredQuotes(filtered);
+  }, [searchQuery, quotes]);
 
-  const handleNext = () => {
-    if (selectedFamilies.length === 0) {
-      alert('Please select at least one product family.');
-      return;
+  const handleDelete = async (sk: string) => {
+    if (window.confirm('Are you sure you want to delete this quote?')) {
+      const quoteId = sk.split('#')[1];
+      try {
+        await deleteQuote(quoteId);
+        // Optimistic update
+        const newQuotes = quotes.filter((q) => q.SK !== sk);
+        setQuotes(newQuotes);
+        setFilteredQuotes(newQuotes.filter(
+            (quote) =>
+              quote.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              quote.status?.toLowerCase().includes(searchQuery.toLowerCase())
+          ));
+      } catch (err) {
+        alert('Failed to delete quote.');
+      }
     }
-    setProductFamiliesForQuote(selectedFamilies); // Save selected families to Zustand store
-    router.push('/quotes/editor'); // Navigate to quote editor
   };
-
-  if (loading) return <div className="flex justify-center items-center min-h-screen">Loading families...</div>;
-  if (error) return <div className="flex justify-center items-center min-h-screen text-red-500">{error}</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">Select Product Families</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
-        {productFamilies.map((family) => (
-          <div
-            key={family.id}
-            className={`bg-white p-6 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow
-              ${selectedFamilies.some((f) => f.id === family.id) ? 'border-2 border-blue-500' : 'border border-gray-200'}`}
-            onClick={() => handleFamilySelect(family)}
-          >
-            <h2 className="text-xl font-semibold text-gray-700">{family.name}</h2>
-            <p className="text-gray-500">Category: {family.category}</p>
-            <p className="text-gray-500 text-sm">Margin: {family.base_margin}%</p>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">All Quotes</h1>
+          <p className="text-muted-foreground">
+            Manage and view all your created quotations.
+          </p>
+        </div>
+        <Button onClick={() => router.push('/quotes/new')}>
+          <Plus className="mr-2 h-4 w-4" /> New Quote
+        </Button>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Quotations</CardTitle>
+          <CardDescription>
+            A list of all your quotations including their status and amount.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search by customer or status..."
+                className="pl-8 max-w-sm"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
           </div>
-        ))}
-      </div>
-      <div className="mt-8 flex justify-center">
-        <button
-          onClick={handleNext}
-          className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md text-lg"
-        >
-          Next: Go to Quote Editor
-        </button>
-      </div>
+
+          {loading ? (
+            <div className="text-center py-4">Loading quotes...</div>
+          ) : error ? (
+            <div className="text-center text-red-500 py-4">{error}</div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Amount (INR)</TableHead>
+                    <TableHead className="text-right">Created At</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredQuotes.length > 0 ? (
+                    filteredQuotes.map((quote) => {
+                       const quoteId = quote.SK.split('#')[1];
+                       return (
+                      <TableRow key={quote.SK}>
+                        <TableCell className="font-medium">
+                          {quote.customer_name}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={quote.status === 'DRAFT' ? 'outline' : 'default'}>
+                            {quote.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {quote.total_amount?.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {new Date(quote.created_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => router.push(`/quotes/${quoteId}`)}
+                              title="View"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => router.push(`/quotes/editor?id=${quoteId}`)}
+                              title="Edit"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete(quote.SK)}
+                              title="Delete"
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )})
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-24 text-center">
+                        No quotes found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
 
-export default NewQuotePage;
+export default AllQuotesPage;
