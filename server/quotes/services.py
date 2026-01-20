@@ -192,31 +192,31 @@ class DynamoDBService:
                 html_content += f"""
                     <tr>
                         <td>{item.get('name')}</td>
-                        <td>{item.get('qty'):.2f}</td>
-                        <td>INR {item.get('unit_price'):.2f}</td>
+                        <td>{float(item.get('qty', 0)):.2f}</td>
+                        <td>INR {float(item.get('unit_price', 0)):.2f}</td>
                         <td>{item.get('unit_type')}</td>
-                        <td>INR {item.get('total'):.2f}</td>
+                        <td>INR {float(item.get('total', 0)):.2f}</td>
                     </tr>
                 """
             html_content += f"""
                     <tr>
                         <td colspan="4" class="total">Family Subtotal</td>
-                        <td class="total">INR {family.get('subtotal', 0.0):.2f}</td>
+                        <td class="total">INR {float(family.get('subtotal', 0.0)):.2f}</td>
                     </tr>
                     <tr>
-                        <td colspan="4" class="total">Margin Applied ({family.get('margin_applied', 0) * 100:.0f}%)</td>
-                        <td class="total">INR {family.get('subtotal', 0.0) * family.get('margin_applied', 0.0):.2f}</td>
+                        <td colspan="4" class="total">Margin Applied ({float(family.get('margin_applied', 0)) * 100:.0f}%)</td>
+                        <td class="total">INR {float(family.get('subtotal', 0.0)) * float(family.get('margin_applied', 0.0)):.2f}</td>
                     </tr>
                     <tr>
                         <td colspan="4" class="total">Family Total (incl. margin)</td>
-                        <td class="total">INR {family.get('subtotal', 0.0) * (1 + family.get('margin_applied', 0.0)):.2f}</td>
+                        <td class="total">INR {float(family.get('subtotal', 0.0)) * (1 + float(family.get('margin_applied', 0.0))):.2f}</td>
                     </tr>
                 </tbody>
             </table>
             """
         
         html_content += f"""
-            <h2>Grand Total: INR {quote_data.get('total_amount', 0.0):.2f}</h2>
+            <h2>Grand Total: INR {float(quote_data.get('total_amount', 0.0)):.2f}</h2>
             </body>
             </html>
         """
