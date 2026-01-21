@@ -33,3 +33,28 @@
 ## Cognito Setup for Localhost
 1.  Add `http://localhost:3000` to **Allowed callback URLs** in your Cognito App Client settings.
 2.  Add `http://localhost:3000` to **Allowed sign-out URLs**.
+
+## Managing Cognito Users via CLI
+
+You can manage AWS Cognito users directly from the Django backend container using the custom `cognito_users` command.
+
+**Usage:**
+Run inside the server container (e.g., `docker exec -it quotely-server-1 bash`):
+
+*   **List Users**:
+    ```bash
+    python manage.py cognito_users list
+    ```
+*   **Get User Details**:
+    ```bash
+    python manage.py cognito_users get <username>
+    ```
+*   **Create User**:
+    ```bash
+    python manage.py cognito_users create <username> <email> --org-name "Organization Name"
+    ```
+    (Note: This creates the user in Cognito AND triggers the local DB sync/creation when they first log in, or you can invoke the manager manually if needed).
+*   **Delete User**:
+    ```bash
+    python manage.py cognito_users delete <username>
+    ```
