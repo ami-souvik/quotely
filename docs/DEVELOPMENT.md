@@ -58,3 +58,4 @@ Run inside the server container (e.g., `docker exec -it quotely-server-1 bash`):
     ```bash
     python manage.py cognito_users delete <username>
     ```
+* In order to manage local DB include flag: [--local]

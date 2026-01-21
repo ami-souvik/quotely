@@ -15,9 +15,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
-import { createProduct, deleteProduct, getProducts, getProductsByFamily, updateProduct } from '@/lib/api/products';
+import { createProduct, deleteProduct, getProductsByFamily, updateProduct } from '@/lib/api/products';
 import { deleteQuote } from '@/lib/api/quotes';
 import { Product } from '@/lib/types';
+import { useAuth } from 'react-oidc-context';
 
 // Interfaces
 interface Quote {
@@ -145,7 +146,10 @@ const ProductList: React.FC<{ family: ProductFamilySerializer }> = ({ family }) 
 
 
 const DashboardPage: React.FC = () => {
+  const auth = useAuth();
   const { user } = useAuthStore();
+  console.log(user);
+  console.log(auth);
   const router = useRouter();
 
   const [quotes, setQuotes] = useState<Quote[]>([]);
