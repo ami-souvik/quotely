@@ -232,28 +232,222 @@ Step D: Storage (S3)
 
 ---
 
-8️⃣ MVP Development Plan (21 Days)
+8️⃣ Docker Deployment on AWS EC2 (Step-by-Step)
 
-Week 1: Foundation & Data
-* Day 1-2: Setup Django repo, Docker, and DynamoDB connection (boto3).
-* Day 3-4: Implement User Auth (JWT) and Organization Logic.
-* Day 5-7: Build "Product Family" and "Master Catalog" CRUD APIs. Seed with dummy data (Kitchen, Bath).
+If you prefer to deploy using Docker containers on a single AWS EC2 instance (simplest start), follow these steps.
 
-Week 2: The Core Builder (Frontend)
-* Day 8-10: Next.js setup with Shadcn/UI. Build Login and Dashboard.
-* Day 11-13: Build the Quote Editor. This is the hardest part. Focus on adding/removing items from local state and
-    calculating totals live.
-* Day 14: Integration. Send the JSON payload to Django and save to DynamoDB.
+**Prerequisites:**
+1.  **AWS Account** with a valid payment method.
+2.  **AWS CLI** installed and configured locally (`aws configure`).
+3.  **SSH Key Pair** downloaded for EC2 access.
 
-Week 3: Output & Polish
-* Day 15-17: Implement WeasyPrint in Django. Generate PDF from the JSON snapshot. Upload to S3.
-* Day 18: Mobile responsiveness check. Ensure keyboard doesn't hide input fields (common mobile web issue).
-* Day 19-20: AWS Deployment (ECR, App Runner, Amplify).
-* Day 21: Final end-to-end smoke test.
+**Step 1: Configure AWS Resources**
 
-🚫 Constraints Check
-* No ERP: We only store snapshots, we don't track inventory levels.
-* Mobile First: UI is designed with Drawers and Sticky Footers.
-* MicroSaaS: Multi-tenant ORG# keys are baked in from day 1.
+1.  **Create DynamoDB Table**:
+    *   Go to DynamoDB Console -> **Create table**.
+    *   **Name**: `QuotelyCore` (or as per your `.env`).
+    *   **Partition Key**: `PK` (String).
+    *   **Sort Key**: `SK` (String).
+    *   **Indexes**: Create two GSIs:
+        *   `User-Date-Index` (PK: `GSI1PK`, SK: `GSI1SK`).
+        *   `Family-Product-Index` (PK: `GSI2PK`, SK: `GSI2SK`).
 
-You are ready to execute. Start by setting up the Django Docker container.
+2.  **Create S3 Bucket**:
+    *   Go to S3 Console -> **Create bucket**.
+    *   **Name**: `quotely-quotes-prod` (must be unique).
+    *   **Region**: `ap-south-1` (same as DynamoDB).
+    *   **Block Public Access**: **ENABLED** (Recommended).
+    *   **Object Ownership**: **Bucket owner enforced** (ACLs disabled).
+
+3.  **Create IAM User**:
+    *   Go to IAM Console -> **Users** -> **Create User** (`quotely-deploy`).
+    *   **Permissions**: Attach a policy allowing `DynamoDBFullAccess` and `S3FullAccess` (or scope strictly to the created resources).
+    *   **Security Credentials**: Create Access Key and save the **ID** and **Secret**.
+
+**Step 2: Prepare Application for Docker**
+
+1.  **Update `server/.env`**:
+    *   Create a production `.env` file for the backend.
+    *   Set `DEBUG=False`.
+    *   Set `ALLOWED_HOSTS=your-ec2-public-ip` (after creating EC2) or `*` temporarily.
+    *   Set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` from Step 1.
+    *   Set `DYNAMO_TABLE_NAME` and `AWS_S3_BUCKET_NAME`.
+    *   **Comment out** `DYNAMODB_ENDPOINT_URL` (to use real AWS).
+
+2.  **Update `docker-compose.yml`**:
+    *   Ensure the `server` service command is `gunicorn config.wsgi:application --bind 0.0.0.0:8000`.
+    *   Ensure `client` has `NEXT_PUBLIC_API_URL` pointing to your EC2 IP/Domain.
+
+**Step 3: Launch EC2 Instance**
+
+1.  Go to EC2 Console -> **Launch Instance**.
+2.  **OS**: Ubuntu Server 24.04 LTS (t3.small or t3.medium recommended for Node+Python build).
+3.  **Key Pair**: Select your SSH key.
+4.  **Security Group**: Allow **SSH (22)**, **HTTP (80)**, **HTTPS (443)**, **Custom TCP (3000)**, **Custom TCP (8000)** from Anywhere (0.0.0.0/0).
+
+**Step 4: Deploy on EC2**
+
+1.  **SSH into EC2**:
+    ```bash
+    ssh -i "your-key.pem" ubuntu@your-ec2-public-ip
+    ```
+
+2.  **Install Docker & Docker Compose**:
+    ```bash
+    sudo apt update
+    sudo apt install docker.io docker-compose -y
+    sudo usermod -aG docker $USER
+    # Log out and log back in for permissions to take effect
+    ```
+
+3.  **Clone/Copy Code**:
+    *   Clone your repo: `git clone https://github.com/your-repo/quotely.git`
+    *   Or SCP your project folder.
+
+4.  **Run Containers**:
+    ```bash
+    cd quotely
+    # Create .env file with production secrets
+    nano server/.env 
+    # Build and start in detached mode
+    docker-compose up -d --build
+    ```
+
+5.  **Verify**:
+    *   Visit `http://your-ec2-public-ip:3000` in your browser.
+    *   The frontend should load and communicate with the backend at port 8000.
+
+---
+
+🔟 Serverless Deployment (AWS Lambda + Docker)
+
+For a serverless backend that scales to zero (pay only when used), we can deploy the Django Docker container to AWS Lambda using the **AWS Lambda Web Adapter**. This adapter allows us to run standard web applications (Django, Flask, etc.) on Lambda without code changes.
+
+**How it works:**
+The adapter runs as a Lambda Extension. It receives Lambda events (from API Gateway or Function URL), converts them to standard HTTP requests, forwards them to your web app (Gunicorn) running on localhost inside the container, and then converts the HTTP response back to a Lambda response.
+
+**Prerequisites:**
+1.  AWS CLI installed and configured.
+2.  Docker installed.
+
+**Step 1: Update Dockerfile for Lambda**
+
+We need to add the Lambda Web Adapter to our `server/Dockerfile`.
+
+1.  Open `server/Dockerfile`.
+2.  Add this line **after** the `FROM` instruction:
+    ```dockerfile
+    COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.7.0 /lambda-adapter /opt/extensions/lambda-adapter
+    ```
+    (This copies the adapter binary into the container extension path).
+3.  Ensure your `CMD` starts Gunicorn on port `8080` (default port expected by the adapter, though configurable).
+    ```dockerfile
+    # ... existing steps ...
+    EXPOSE 8080
+    CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8080"]
+    ```
+
+**Step 2: Build and Push to AWS ECR**
+
+1.  **Create ECR Repository**:
+    ```bash
+    aws ecr create-repository --repository-name quotely-serverless --region ap-south-1
+    ```
+
+2.  **Login to ECR**:
+    ```bash
+    aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin YOUR_ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com
+    ```
+
+3.  **Build Image**:
+    ```bash
+    docker build -t quotely-serverless -f server/Dockerfile server/
+    ```
+
+4.  **Tag and Push**:
+    ```bash
+    docker tag quotely-serverless:latest YOUR_ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/quotely-serverless:latest
+    docker push YOUR_ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/quotely-serverless:latest
+    ```
+
+**Step 3: Create Lambda Function**
+
+1.  Go to AWS Lambda Console -> **Create function**.
+2.  Select **Container image**.
+3.  **Name**: `quotely-api`.
+4.  **Container image URI**: Browse and select the image you just pushed (`quotely-serverless:latest`).
+5.  **Architecture**: x86_64 (or arm64 if you built on M1/M2 Mac).
+6.  **Create function**.
+
+**Step 4: Configure Lambda**
+
+1.  **Configuration -> General configuration**:
+    *   **Timeout**: Increase to 30 seconds (or more for PDF generation).
+    *   **Memory**: Increase to 512MB or 1024MB (PDF generation needs RAM/CPU).
+
+2.  **Configuration -> Environment variables**:
+    *   Add all variables from your `server/.env` file:
+        *   `DJANGO_SECRET_KEY`
+        *   `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
+        *   `DYNAMO_TABLE_NAME`, `AWS_S3_BUCKET_NAME`
+        *   `DEBUG`: `False`
+        *   `ALLOWED_HOSTS`: `*` (or the specific Function URL domain).
+
+3.  **Permissions**:
+    *   Go to **Configuration -> Permissions**.
+    *   Click the Role name to open IAM.
+    *   Add policies to allow access to DynamoDB (`QuotelyCore`) and S3 (`quotely-quotes`).
+
+**Step 5: Expose via Function URL or API Gateway**
+
+**Option A: Function URL (Simplest)**
+1.  Go to **Configuration -> Function URL**.
+2.  **Create function URL**.
+3.  **Auth type**: `NONE` (if you want it public for your frontend to call).
+4.  **CORS**: Configure to allow your frontend domain (e.g., `*` for dev, or your Vercel/Amplify domain).
+    *   Allow Methods: `*`.
+    *   Allow Headers: `*`.
+    *   Allow Origins: `*`.
+5.  **Save**.
+6.  Copy the Function URL. This is your new `NEXT_PUBLIC_API_URL`.
+
+**Option B: API Gateway (Advanced)**
+1.  Create an HTTP API in API Gateway.
+2.  Create a route `ANY /{proxy+}`.
+3.  Integrate it with your Lambda function.
+
+**Step 6: Update Frontend**
+
+1.  Update your frontend environment variable `NEXT_PUBLIC_API_URL` to point to the Lambda Function URL (e.g., `https://xyz...lambda-url.ap-south-1.on.aws/api` - note you might need to append `/api` if your Django urls expect it, or adjust Django `urls.py`).
+2.  Redeploy frontend.
+
+---
+
+1️⃣1️⃣ Traditional Deployment (EC2 without Docker)
+
+For simplicity or debugging, you can run the Django app directly on a Linux server (Ubuntu 24.04).
+
+**Step 1: System Setup**
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install python3-pip python3-venv libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-gobject0 libgdk-pixbuf-2.0-0 libcairo-gobject2 -y
+```
+
+**Step 2: Application Setup**
+```bash
+git clone https://github.com/your-repo/quotely.git
+cd quotely/server
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+pip install gunicorn
+```
+
+**Step 3: Configuration**
+Create `.env` file in `server/` with your AWS credentials and settings.
+
+**Step 4: Run Application**
+```bash
+gunicorn config.wsgi:application --bind 0.0.0.0:8000
+```
+(For production, set up a Systemd service and Nginx reverse proxy).
