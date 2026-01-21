@@ -1,9 +1,10 @@
 import axios from 'axios';
 import { create } from 'zustand';
-import { AuthUser, ProductFamilySerializer } from '../types';
+import { ProductFamilySerializer } from '../types';
+import { User } from 'oidc-client-ts';
 
-// const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-const API_BASE_URL = 'http://192.168.0.193:8000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+// const API_BASE_URL = 'https://af3zoi4ci0.execute-api.ap-south-1.amazonaws.com/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -13,46 +14,35 @@ const api = axios.create({
 });
 
 // Add token to requests
-api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().accessToken;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+api.interceptors.request.use(async (config) => {
+  try {
+    // Get OIDC token from sessionStorage
+    const authority = process.env.NEXT_PUBLIC_COGNITO_AUTHORITY || "https://cognito-idp.ap-south-1.amazonaws.com/ap-south-1_BvTJlEG5R";
+    const clientId = process.env.NEXT_PUBLIC_USER_POOL_CLIENT_ID || "5dqss2ei776k8n7jb9e54le8q4";
+    const key = `oidc.user:${authority}:${clientId}`;
+    
+    // Check both session and local storage just in case config changes
+    const storageString = sessionStorage.getItem(key) || localStorage.getItem(key);
+    
+    if (storageString) {
+        const user = useAuthStore.getState().user;
+        const token = user?.id_token?.toString(); // Sending ID Token for backend validation
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+    }
+  } catch (error) {
+    console.debug("No auth session found", error);
   }
   return config;
 });
 
-// Handle token refresh
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
-    const { getState, setState } = useAuthStore;
-
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      
-      try {
-        const refreshToken = getState().refreshToken;
-        if (refreshToken) {
-          const response = await axios.post(`${API_BASE_URL}/auth/refresh/`, {
-            refresh: refreshToken,
-          });
-          
-          const { access } = response.data;
-          setState({ accessToken: access });
-          localStorage.setItem('accessToken', access);
-          originalRequest.headers.Authorization = `Bearer ${access}`;
-          
-          return api(originalRequest);
-        } else {
-            getState().logout();
-        }
-      } catch (refreshError) {
-        getState().logout();
-        return Promise.reject(refreshError);
-      }
+    if (error.response?.status === 401) {
+        useAuthStore.getState().logout();
     }
-    
     return Promise.reject(error);
   }
 );
@@ -61,50 +51,34 @@ export default api;
 
 // Auth Store (Zustand)
 interface AuthState {
-  accessToken: string | null;
-  refreshToken: string | null;
-  user: AuthUser | null;
+  user: User | null;
   selectedProductFamilies: ProductFamilySerializer[];
-  isLoading: boolean; // <-- Add isLoading state
+  isLoading: boolean;
 
-  initialize: () => void; // <-- Add initialize action
-  setTokens: (access: string, refresh: string) => void;
-  setUser: (user: AuthUser) => void;
+  initialize: () => void;
+  setUser: (user: User) => void;
   logout: () => void;
   isAuthenticated: () => boolean;
   setProductFamiliesForQuote: (families: ProductFamilySerializer[]) => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
-  accessToken: null,
-  refreshToken: null,
   user: null,
   selectedProductFamilies: [],
-  isLoading: true, // <-- Initialize isLoading to true
+  isLoading: true,
 
-  initialize: () => {
+  initialize: async () => {
+    set({ isLoading: true });
     try {
-      const accessToken = localStorage.getItem('accessToken');
-      const refreshToken = localStorage.getItem('refreshToken');
-      const user = localStorage.getItem('user');
-      if (accessToken && refreshToken && user) {
-        set({
-          accessToken,
-          refreshToken,
-          user: JSON.parse(user),
-        });
-      }
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+            set({ user: JSON.parse(userStr) });
+        }
     } catch (error) {
       console.error("Failed to initialize auth store:", error);
     } finally {
       set({ isLoading: false });
     }
-  },
-
-  setTokens: (access, refresh) => {
-    set({ accessToken: access, refreshToken: refresh });
-    localStorage.setItem('accessToken', access);
-    localStorage.setItem('refreshToken', refresh);
   },
 
   setUser: (user) => {
@@ -113,20 +87,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: () => {
+    // Clear OIDC storage
+    const authority = process.env.NEXT_PUBLIC_COGNITO_AUTHORITY || "https://cognito-idp.ap-south-1.amazonaws.com/ap-south-1_BvTJlEG5R";
+    const clientId = process.env.NEXT_PUBLIC_USER_POOL_CLIENT_ID || "5dqss2ei776k8n7jb9e54le8q4";
+    const key = `oidc.user:${authority}:${clientId}`;
+    sessionStorage.removeItem(key);
+    localStorage.removeItem(key);
+
     set({
-      accessToken: null,
-      refreshToken: null,
       user: null,
       selectedProductFamilies: [],
     });
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
+    
+    // Redirect to login if needed or let the app handle it
+    window.location.href = '/login';
   },
 
   isAuthenticated: () => {
     const state = get();
-    return !!state.accessToken && !!state.user;
+    return !!state.user;
   },
 
   setProductFamiliesForQuote: (families) => {
