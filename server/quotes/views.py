@@ -7,22 +7,27 @@ from .permissions import IsAdmin
 from weasyprint import HTML, CSS
 from io import BytesIO
 
+def get_org_id(request):
+    if request.user.is_authenticated and hasattr(request.user, 'organization') and request.user.organization:
+        return request.user.organization.id
+    return None
+
 class ProductFamilyListView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsAdmin]
 
     def get(self, request):
         service = DynamoDBService()
-        org_id = request.organization.id if request.organization else None
+        org_id = get_org_id(request)
         if not org_id:
             return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
         
         families = service.get_product_families(org_id)
-        serializer = ProductFamilySerializer(families, many=True) # Corrected: remove `data=`
+        serializer = ProductFamilySerializer(families, many=True)
         return Response(serializer.data)
 
     def post(self, request):
         service = DynamoDBService()
-        org_id = request.organization.id if request.organization else None
+        org_id = get_org_id(request)
         if not org_id:
             return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -43,7 +48,7 @@ class ProductFamilyDetailView(APIView):
 
     def get(self, request, category, family_id):
         service = DynamoDBService()
-        org_id = request.organization.id if request.organization else None
+        org_id = get_org_id(request)
         if not org_id:
             return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -54,7 +59,7 @@ class ProductFamilyDetailView(APIView):
 
     def put(self, request, category, family_id):
         service = DynamoDBService()
-        org_id = request.organization.id if request.organization else None
+        org_id = get_org_id(request)
         if not org_id:
             return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -68,7 +73,7 @@ class ProductFamilyDetailView(APIView):
 
     def delete(self, request, category, family_id):
         service = DynamoDBService()
-        org_id = request.organization.id if request.organization else None
+        org_id = get_org_id(request)
         if not org_id:
             return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -79,7 +84,7 @@ class ProductFamilyDetailView(APIView):
 class MasterItemListView(APIView):
     def get(self, request):
         service = DynamoDBService()
-        org_id = request.organization.id if request.organization else None
+        org_id = get_org_id(request)
         category = request.query_params.get('category')
         
         if not org_id:
@@ -90,7 +95,7 @@ class MasterItemListView(APIView):
 
     def post(self, request):
         service = DynamoDBService()
-        org_id = request.organization.id if request.organization else None
+        org_id = get_org_id(request)
         if not org_id:
             return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -106,7 +111,7 @@ class MasterItemListView(APIView):
 class MasterItemDetailView(APIView):
     def get(self, request, category, item_id):
         service = DynamoDBService()
-        org_id = request.organization.id if request.organization else None
+        org_id = get_org_id(request)
         if not org_id:
             return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -117,7 +122,7 @@ class MasterItemDetailView(APIView):
 
     def put(self, request, category, item_id):
         service = DynamoDBService()
-        org_id = request.organization.id if request.organization else None
+        org_id = get_org_id(request)
         if not org_id:
             return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -131,7 +136,7 @@ class MasterItemDetailView(APIView):
 
     def delete(self, request, category, item_id):
         service = DynamoDBService()
-        org_id = request.organization.id if request.organization else None
+        org_id = get_org_id(request)
         if not org_id:
             return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -141,7 +146,7 @@ class MasterItemDetailView(APIView):
 class QuotationCreateView(APIView):
     def post(self, request):
         service = DynamoDBService()
-        org_id = request.organization.id if request.organization else None
+        org_id = get_org_id(request)
         
         if not org_id:
             return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
@@ -158,7 +163,7 @@ class QuotationCreateView(APIView):
 class QuotationDetailView(APIView):
     def get(self, request, quote_id):
         service = DynamoDBService()
-        org_id = request.organization.id if request.organization else None
+        org_id = get_org_id(request)
         
         if not org_id:
             return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
@@ -170,7 +175,7 @@ class QuotationDetailView(APIView):
 
     def put(self, request, quote_id):
         service = DynamoDBService()
-        org_id = request.organization.id if request.organization else None
+        org_id = get_org_id(request)
         
         if not org_id:
             return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
@@ -184,7 +189,7 @@ class QuotationDetailView(APIView):
 
     def delete(self, request, quote_id):
         service = DynamoDBService()
-        org_id = request.organization.id if request.organization else None
+        org_id = get_org_id(request)
         
         if not org_id:
             return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
@@ -196,7 +201,7 @@ class QuotationDetailView(APIView):
 class QuotationGeneratePDFView(APIView):
     def post(self, request, quote_id):
         service = DynamoDBService()
-        org_id = request.organization.id if request.organization else None
+        org_id = get_org_id(request)
         
         if not org_id:
             return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
@@ -206,8 +211,11 @@ class QuotationGeneratePDFView(APIView):
             return Response({"error": "Quotation not found"}, status=status.HTTP_404_NOT_FOUND)
         
         try:
+            # Use org name from user if available, else default
+            org_name = request.user.organization.name if request.user.is_authenticated and hasattr(request.user, 'organization') and request.user.organization else "Quotely Org"
+            
             # Assuming quote['snapshot'] contains the data needed for PDF
-            html_content = service.generate_quote_pdf_html(quote['snapshot'], org_name=request.organization.name)
+            html_content = service.generate_quote_pdf_html(quote['snapshot'], org_name=org_name)
             pdf_bytes = HTML(string=html_content).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm; }')])
             
             s3_pdf_link = service.upload_pdf_to_s3(BytesIO(pdf_bytes), org_id, quote_id)
@@ -223,7 +231,7 @@ class QuotationGeneratePDFView(APIView):
 class QuotationPresignedURLView(APIView):
     def get(self, request, quote_id):
         service = DynamoDBService()
-        org_id = request.organization.id if request.organization else None
+        org_id = get_org_id(request)
         
         if not org_id:
             return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
@@ -238,9 +246,12 @@ class QuotationPresignedURLView(APIView):
         return Response({"error": "Failed to generate presigned URL"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class UserQuotationListView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
     def get(self, request):
+        print(request.user)
         service = DynamoDBService()
-        org_id = request.organization.id if request.organization else None
+        org_id = get_org_id(request)
         user_id = str(request.user.id) # Ensure user_id is a string
         
         if not org_id:
@@ -255,7 +266,7 @@ class ProductListView(APIView):
 
     def get(self, request):
         service = DynamoDBService()
-        org_id = request.organization.id if request.organization else None
+        org_id = get_org_id(request)
         if not org_id:
             return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -265,7 +276,7 @@ class ProductListView(APIView):
 
     def post(self, request):
         service = DynamoDBService()
-        org_id = request.organization.id if request.organization else None
+        org_id = get_org_id(request)
         if not org_id:
             return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -287,7 +298,7 @@ class ProductDetailView(APIView):
 
     def get(self, request, product_id):
         service = DynamoDBService()
-        org_id = request.organization.id if request.organization else None
+        org_id = get_org_id(request)
         if not org_id:
             return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -299,7 +310,7 @@ class ProductDetailView(APIView):
 
     def put(self, request, product_id):
         service = DynamoDBService()
-        org_id = request.organization.id if request.organization else None
+        org_id = get_org_id(request)
         if not org_id:
             return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -315,7 +326,7 @@ class ProductDetailView(APIView):
 
     def delete(self, request, product_id):
         service = DynamoDBService()
-        org_id = request.organization.id if request.organization else None
+        org_id = get_org_id(request)
         if not org_id:
             return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -328,7 +339,7 @@ class ProductListByFamilyView(APIView):
 
     def get(self, request, category, family_id):
         service = DynamoDBService()
-        org_id = request.organization.id if request.organization else None
+        org_id = get_org_id(request)
         if not org_id:
             return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
         

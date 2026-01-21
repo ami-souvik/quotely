@@ -32,8 +32,7 @@ ALLOWED_HOSTS = allowed_hosts_string.split(',')
 
 if not any(ALLOWED_HOSTS):
     ALLOWED_HOSTS = [
-        '192.168.0.0/16',
-        '192.168.0.193'
+        '*'
     ]
 
 
@@ -58,11 +57,11 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'config.middleware.MultiTenancyMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -133,25 +132,24 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+# Enable WhiteNoise's Gzip compression of static assets.
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'django_cognito_jwt.JSONWebTokenAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
 }
 
-# Simple JWT
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60), # Longer for dev, reduce for prod
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,
-    'AUTH_HEADER_TYPES': ('Bearer',),
-}
+# AWS Cognito
+COGNITO_AWS_REGION = os.getenv('COGNITO_AWS_REGION', 'ap-south-1')
+COGNITO_USER_POOL = os.getenv('COGNITO_USER_POOL')
+COGNITO_AUDIENCE = os.getenv('COGNITO_AUDIENCE', os.getenv('COGNITO_APP_CLIENT_ID'))
 
 # CORS
 CORS_ALLOWED_ORIGINS = [
@@ -170,4 +168,5 @@ DYNAMODB_ENDPOINT_URL=os.getenv('DYNAMODB_ENDPOINT_URL', None)
 
 # Custom User Model
 AUTH_USER_MODEL = 'users.User'
+COGNITO_USER_MODEL = 'users.User'
 
