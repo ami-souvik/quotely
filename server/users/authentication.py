@@ -1,6 +1,6 @@
 from rest_framework import authentication
 from rest_framework import exceptions
-from django_cognito_jwt.authentication import JSONWebTokenAuthentication
+from django_cognito_jwt.backend import JSONWebTokenAuthentication
 from quotes.services import DynamoDBService
 
 class OrganizationStub:
