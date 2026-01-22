@@ -1,6 +1,7 @@
 from rest_framework import authentication
 from rest_framework import exceptions
 from django_cognito_jwt.backend import JSONWebTokenAuthentication
+from django_cognito_jwt.validator import TokenError
 from quotes.services import DynamoDBService
 
 class OrganizationStub:
@@ -26,6 +27,21 @@ class StatelessUser:
         return self.username
 
 class DynamoDBAuthentication(JSONWebTokenAuthentication):
+    def authenticate(self, request):
+        jwt_token = self.get_jwt_token(request)
+        if jwt_token is None:
+            return None
+
+        # Authenticate token
+        try:
+            token_validator = self.get_token_validator(request)
+            jwt_payload = token_validator.validate(jwt_token)
+        except TokenError:
+            raise exceptions.AuthenticationFailed()
+
+        user = self.authenticate_credentials(jwt_payload)
+        return (user, jwt_token)
+
     def authenticate_credentials(self, payload):
         # 1. Extract standard claims
         user_id = payload.get('sub') or payload.get('username')
