@@ -59,3 +59,25 @@ Run inside the server container (e.g., `docker exec -it quotely-server-1 bash`):
     python manage.py cognito_users delete <username>
     ```
 * In order to manage local DB include flag: [--local]
+
+## Automated Deployment Hook
+
+You can set up a git hook to automatically build and deploy the backend to AWS Lambda whenever you push to the repository.
+
+1.  **Ensure `deploy-hook.sh` is executable**:
+    ```bash
+    chmod +x deploy-hook.sh
+    ```
+
+2.  **Copy to Git Hooks**:
+    To run this script before every push (recommended):
+    ```bash
+    cp deploy-hook.sh .git/hooks/pre-push
+    ```
+    *Now, whenever you run `git push`, the script will build the Docker image, push it to ECR, and update the Lambda function. If the deployment fails, the push will be aborted.*
+
+    Alternatively, if you want it to run after every local commit (not recommended due to slowness):
+    ```bash
+    cp deploy-hook.sh .git/hooks/post-commit
+    ```
+

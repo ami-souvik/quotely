@@ -152,10 +152,15 @@ COGNITO_USER_POOL = os.getenv('COGNITO_USER_POOL')
 COGNITO_AUDIENCE = os.getenv('COGNITO_AUDIENCE', os.getenv('COGNITO_APP_CLIENT_ID'))
 
 # CORS
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+cors_allowed_origins_env = os.getenv('CORS_ALLOWED_ORIGINS', "")
+if cors_allowed_origins_env:
+    CORS_ALLOWED_ORIGINS = cors_allowed_origins_env.split(',')
+else:
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://quotely-six.vercel.app"
+    ]
 CORS_ALLOW_CREDENTIALS = True
 
 # AWS & DynamoDB
