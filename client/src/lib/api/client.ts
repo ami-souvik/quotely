@@ -25,11 +25,11 @@ api.interceptors.request.use(async (config) => {
     const storageString = sessionStorage.getItem(key) || localStorage.getItem(key);
     
     if (storageString) {
-        const user = useAuthStore.getState().user;
-        const token = user?.id_token?.toString(); // Sending ID Token for backend validation
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
+      const user = useAuthStore.getState().user;
+      const token = user?.id_token?.toString(); // Sending ID Token for backend validation
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
   } catch (error) {
     console.debug("No auth session found", error);
@@ -49,14 +49,22 @@ api.interceptors.response.use(
 
 export default api;
 
+interface AuthUser extends User {
+  id: string;
+  email?: string,
+  org_id?: string,
+  org_name?: string,
+  role: 'ADMIN' | 'DEFAULT'
+}
+
 // Auth Store (Zustand)
 interface AuthState {
-  user: User | null;
+  user: AuthUser | null;
   selectedProductFamilies: ProductFamilySerializer[];
   isLoading: boolean;
 
   initialize: () => void;
-  setUser: (user: User) => void;
+  setUser: (user: User) => Promise<void>;
   logout: () => void;
   isAuthenticated: () => boolean;
   setProductFamiliesForQuote: (families: ProductFamilySerializer[]) => void;
@@ -70,10 +78,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   initialize: async () => {
     set({ isLoading: true });
     try {
-        const userStr = localStorage.getItem('user');
-        if (userStr) {
-            set({ user: JSON.parse(userStr) });
-        }
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        set({ user: JSON.parse(userStr) });
+      }
     } catch (error) {
       console.error("Failed to initialize auth store:", error);
     } finally {
@@ -81,9 +89,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  setUser: (user) => {
-    set({ user });
-    localStorage.setItem('user', JSON.stringify(user));
+  setUser: async (user) => {
+    // 1. Set initial user with OIDC data to ensure token is available for API calls
+    const initialUser = {
+      ...user,
+      id: user.profile.sub,
+      email: user.profile.email,
+      // Default/Fallback values
+      org_id: user.profile['custom:org_id'] as string | undefined,
+      org_name: user.profile['custom:org_name'] as string | undefined,
+      role: (user.profile['custom:role'] as 'ADMIN' | 'DEFAULT') || 'DEFAULT',
+      
+      expires_in: user.expires_in,
+      expired: user.expired,
+      scopes: user.scopes,
+      toStorageString: user.toStorageString
+    };
+    console.log('Initial User');
+    console.log(initialUser);
+    set({ user: initialUser });
+    localStorage.setItem('user', JSON.stringify(initialUser));
   },
 
   logout: () => {

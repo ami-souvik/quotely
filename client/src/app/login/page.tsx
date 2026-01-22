@@ -3,30 +3,17 @@
 import React, { useEffect } from 'react';
 import { useAuth } from "react-oidc-context";
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/lib/api/client';
 import { Button } from '@/components/ui/button';
 
 const LoginPage: React.FC = () => {
   const auth = useAuth();
   const router = useRouter();
-  const { setUser } = useAuthStore();
 
   useEffect(() => {
     if (auth.isAuthenticated && auth.user) {
-      // Sync with useAuthStore
-      const authUser = {
-        id: auth.user.profile.sub || '',
-        email: auth.user.profile.email || '',
-        first_name: '',
-        last_name: '',
-        role: 'ADMIN' as 'ADMIN',
-        org_id: 'default',
-        org_name: 'Default Org'
-      };
-      setUser(authUser);
       router.push('/quotes');
     }
-  }, [auth.isAuthenticated, auth.user, router, setUser]);
+  }, [auth.isAuthenticated, auth.user, router]);
 
   if (auth.isLoading) {
     return <div className="flex justify-center items-center min-h-screen">Loading...</div>;

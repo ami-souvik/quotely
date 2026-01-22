@@ -2,7 +2,6 @@ from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
 from django.conf import settings
 import uuid
-import boto3
 
 class Organization(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -21,30 +20,6 @@ class CustomUserManager(UserManager):
         # Extract attributes
         org_name = payload.get('custom:org_name')
         role = payload.get('custom:role', 'EMPLOYEE')
-
-        # Fallback if attributes missing (e.g. scope issue)
-        if not org_name:
-            print("WARNING: 'custom:org_name' not found in token. Attempting fallback to Boto3.")
-            try:
-                client = boto3.client('cognito-idp', 
-                    region_name=settings.COGNITO_AWS_REGION,
-                    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY
-                )
-                lookup_key = payload.get('cognito:username', cognito_id)
-                
-                user_info = client.admin_get_user(
-                    UserPoolId=settings.COGNITO_USER_POOL,
-                    Username=lookup_key
-                )
-                for attr in user_info.get('UserAttributes', []):
-                    if attr['Name'] == 'custom:org_name':
-                        org_name = attr['Value']
-                        print(f"DEBUG: Found org_name via Boto3: {org_name}")
-                    elif attr['Name'] == 'custom:role':
-                        role = attr['Value']
-            except Exception as e:
-                print(f"Error fetching user from Cognito via Boto3: {e}")
 
         # Ensure role is valid (simple validation)
         if role not in ['ADMIN', 'EMPLOYEE']:

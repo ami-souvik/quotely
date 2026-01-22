@@ -47,11 +47,6 @@ export const authService = {
     window.location.href = '/login';
   },
 
-  async getCurrentUser(): Promise<User> {
-    const response = await api.get('/users/me/');
-    return response.data;
-  },
-
   isAuthenticated(): boolean {
     return !!localStorage.getItem('access_token');
   },

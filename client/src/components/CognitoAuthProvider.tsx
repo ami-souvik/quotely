@@ -16,7 +16,7 @@ const cognitoAuthConfig = {
   client_id: process.env.NEXT_PUBLIC_USER_POOL_CLIENT_ID || "5dqss2ei776k8n7jb9e54le8q4",
   redirect_uri: redirectUri,
   response_type: "code",
-  scope: "email openid phone",
+  scope: "email openid phone profile",
 };
 
 export default function CognitoAuthProvider({ children }: { children: React.ReactNode }) {
