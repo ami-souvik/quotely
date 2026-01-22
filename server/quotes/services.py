@@ -269,6 +269,72 @@ class DynamoDBService:
             print(f"Error fetching user quotations: {e.response['Error']['Message']}")
             return []
 
+    def get_organization_id_by_name(self, org_name):
+        slug = org_name.lower().replace(' ', '-')
+        try:
+            response = self.table.get_item(
+                Key={
+                    'PK': f"ORG_NAME#{slug}",
+                    'SK': "INFO"
+                }
+            )
+            item = response.get('Item')
+            if item:
+                return item.get('org_id')
+            return None
+        except ClientError as e:
+            print(f"Error fetching organization by name: {e.response['Error']['Message']}")
+            return None
+
+    def create_organization(self, org_name):
+        org_id = str(uuid.uuid4())
+        slug = org_name.lower().replace(' ', '-')
+        
+        # 1. Create the lookup item
+        lookup_item = {
+            'PK': f"ORG_NAME#{slug}",
+            'SK': "INFO",
+            'org_id': org_id,
+            'name': org_name
+        }
+        
+        # 2. Create the main organization item
+        org_item = {
+            'PK': f"ORG#{org_id}",
+            'SK': "METADATA",
+            'name': org_name,
+            'slug': slug,
+            'created_at': datetime.datetime.now().isoformat()
+        }
+        
+        try:
+            # Use a transaction to ensure both are created
+            self.dynamodb.meta.client.transact_write_items(
+                TransactItems=[
+                    {
+                        'Put': {
+                            'TableName': settings.DYNAMO_TABLE_NAME,
+                            'Item': lookup_item,
+                            'ConditionExpression': 'attribute_not_exists(PK)' # Ensure unique name
+                        }
+                    },
+                    {
+                        'Put': {
+                            'TableName': settings.DYNAMO_TABLE_NAME,
+                            'Item': org_item
+                        }
+                    }
+                ]
+            )
+            return org_id
+        except ClientError as e:
+            print(f"Error creating organization: {e.response['Error']['Message']}")
+            # Check if it failed because name exists, in that case return existing ID
+            if e.response['Error']['Code'] == 'TransactionCanceledException':
+                # Attempt to fetch existing ID
+                return self.get_organization_id_by_name(org_name)
+            return None
+
     # --- Existing methods ---
     def get_product_families(self, org_id):
         try:
