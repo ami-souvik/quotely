@@ -102,12 +102,6 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Ref ExistingBucketName
-      CorsConfiguration:
-        CorsRules:
-          - AllowedHeaders: ["*"]
-            AllowedMethods: ["GET", "PUT", "POST", "HEAD"]
-            AllowedOrigins: ["*"]
-            MaxAge: 3000
 
   # -------------------------------------------------------------------------
   # ECR Repository
