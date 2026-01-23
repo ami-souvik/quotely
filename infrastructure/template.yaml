@@ -120,7 +120,7 @@ Resources:
   QuotelyRepository:
     Type: AWS::ECR::Repository
     Properties:
-      RepositoryName: "quotely-serverless-v10"
+      RepositoryName: "quotely-serverless-v11"
       LifecyclePolicy:
         LifecyclePolicyText: |
           {
@@ -215,7 +215,7 @@ Resources:
       FunctionName: !Sub "quotely-api"
       PackageType: Image
       Code:
-        ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/quotely-serverless-v10:latest"
+        ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/quotely-serverless-v11:latest"
       Role: !GetAtt LambdaExecutionRole.Arn
       Timeout: 60
       MemorySize: 128
