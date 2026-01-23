@@ -81,3 +81,21 @@ You can set up a git hook to automatically build and deploy the backend to AWS L
     cp deploy-hook.sh .git/hooks/post-commit
     ```
 
+## CloudFormation Linting (cfn-lint)
+
+To ensure CloudFormation templates are valid and follow best practices, `cfn-lint` can be used.
+
+1.  **Install `cfn-lint`**:
+    ```bash
+    pip install cfn-lint
+    ```
+
+2.  **Set up Pre-commit Hook**:
+    To automatically lint templates before each commit:
+    ```bash
+    cp infrastructure/lint_cfn.sh .git/hooks/pre-commit
+    chmod +x .git/hooks/pre-commit
+    ```
+    *Now, any changes to `.yaml` files in the `infrastructure/` directory will be linted before the commit is finalized. If `cfn-lint` finds errors, the commit will be blocked, helping to prevent deployment failures.*
+
+
