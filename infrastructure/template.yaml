@@ -231,17 +231,6 @@ Resources:
     Properties:
       Name: !Sub "QuotelyHttpApi-${Environment}"
       ProtocolType: HTTP
-      CorsConfiguration:
-        AllowOrigins: !Split [',', !Ref CorsAllowedOrigins]
-        AllowMethods:
-          - GET
-          - POST
-          - PUT
-          - DELETE
-          - OPTIONS
-        AllowHeaders:
-          - "*"
-        MaxAge: 300
 
   ApiGatewayLambdaIntegration:
     Type: AWS::ApiGatewayV2::Integration
