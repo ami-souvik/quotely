@@ -245,6 +245,7 @@ Resources:
 
   ApiGatewayLambdaIntegration:
     Type: AWS::ApiGatewayV2::Integration
+    Condition: ShouldDeployLambda
     Properties:
       ApiId: !Ref QuotelyHttpApi
       IntegrationType: AWS_PROXY
@@ -253,6 +254,7 @@ Resources:
 
   ApiGatewayDefaultRoute:
     Type: AWS::ApiGatewayV2::Route
+    Condition: ShouldDeployLambda
     Properties:
       ApiId: !Ref QuotelyHttpApi
       RouteKey: "ANY /{proxy+}"
@@ -260,6 +262,7 @@ Resources:
 
   ApiGatewayRootRoute:
     Type: AWS::ApiGatewayV2::Route
+    Condition: ShouldDeployLambda
     Properties:
       ApiId: !Ref QuotelyHttpApi
       RouteKey: "$default"
@@ -267,6 +270,7 @@ Resources:
 
   ApiGatewayStage:
     Type: AWS::ApiGatewayV2::Stage
+    Condition: ShouldDeployLambda
     Properties:
       ApiId: !Ref QuotelyHttpApi
       StageName: "$default"
@@ -274,6 +278,7 @@ Resources:
 
   LambdaApiGatewayPermission:
     Type: AWS::Lambda::Permission
+    Condition: ShouldDeployLambda
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !GetAtt QuotelyFunction.Arn
