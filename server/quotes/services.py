@@ -14,23 +14,17 @@ class DynamoDBService:
             self.dynamodb = boto3.resource(
                 'dynamodb',
                 region_name=settings.AWS_REGION,
-                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
                 endpoint_url=endpoint_url
             )
         else:
             self.dynamodb = boto3.resource(
                 'dynamodb',
-                region_name=settings.AWS_REGION,
-                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY
+                region_name=settings.AWS_REGION
             )
         self.table = self.dynamodb.Table(settings.DYNAMO_TABLE_NAME)
         self.s3_client = boto3.client(
             's3',
-            region_name=settings.AWS_REGION,
-            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY
+            region_name=settings.AWS_REGION
         )
         self.s3_bucket_name = settings.AWS_S3_BUCKET_NAME
 
