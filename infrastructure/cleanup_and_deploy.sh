@@ -9,16 +9,30 @@ FUNCTION_NAME="quotely-api"
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 
 echo "⚠️  WARNING: This will DELETE existing infrastructure to allow CloudFormation to take over."
-# ... (cleanup commented out to save time/errors)
-# echo "Resources to be deleted:"
-# ...
-# aws lambda delete-function ...
-# aws dynamodb delete-table ...
-# aws s3 rm ...
-# aws s3 rb ...
-# aws ecr delete-repository ...
+echo "Resources to be deleted:"
+echo " - DynamoDB Table: $TABLE_NAME"
+echo " - S3 Bucket: $BUCKET_NAME"
+echo " - ECR Repo: $REPO_NAME"
+echo " - Lambda: $FUNCTION_NAME"
+echo "Starting in 5 seconds..."
+sleep 5
 
-echo "🧹 Cleanup complete (Skipped - assumed done)."
+echo "🗑️  Deleting Lambda Function..."
+aws lambda delete-function --function-name $FUNCTION_NAME --region $REGION || echo "Lambda not found or already deleted"
+
+echo "🗑️  Deleting DynamoDB Table..."
+aws dynamodb delete-table --table-name $TABLE_NAME --region $REGION || echo "Table not found or already deleted"
+echo "⏳ Waiting for table deletion..."
+aws dynamodb wait table-not-exists --table-name $TABLE_NAME --region $REGION
+
+echo "🗑️  Deleting S3 Bucket (Emptying first)..."
+aws s3 rm s3://$BUCKET_NAME --recursive --region $REGION || echo "Bucket empty or not accessible"
+aws s3 rb s3://$BUCKET_NAME --region $REGION || echo "Bucket not found or already deleted"
+
+echo "🗑️  Deleting ECR Repository..."
+aws ecr delete-repository --repository-name $REPO_NAME --region $REGION --force || echo "Repo not found or already deleted"
+
+echo "🧹 Cleanup complete."
 
 echo "🚀 Phase 1: Deploying Infrastructure (Without Lambda to create ECR)..."
 ./infrastructure/deploy.sh "false"
