@@ -2,9 +2,9 @@
 set -e
 
 REGION="ap-south-1"
-TABLE_NAME="QuotelyCore-v7" # Updated name
-BUCKET_NAME="quotely-quotes-v7" # Updated name
-REPO_NAME="quotely-serverless-v7" # Updated name
+TABLE_NAME="QuotelyCore-v9" # Updated name
+BUCKET_NAME="quotely-quotes-v9" # Updated name
+REPO_NAME="quotely-serverless-v9" # Updated name
 FUNCTION_NAME="quotely-api"
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 
@@ -38,7 +38,7 @@ echo "🚀 Phase 1: Deploying Infrastructure (Without Lambda to create ECR)..."
 ./infrastructure/deploy.sh "false"
 
 echo "🔨 Phase 2: Building and Pushing Docker Image..."
-IMAGE_NAME="quotely-serverless-v7"
+IMAGE_NAME="quotely-serverless-v9"
 ECR_REPO_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${IMAGE_NAME}"
 
 docker build --quiet --platform linux/arm64 -t $IMAGE_NAME -f server/Dockerfile server/
