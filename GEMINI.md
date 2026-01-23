@@ -10,5 +10,6 @@
    4. docs/API.md: Info about API authentication (Cognito) and key endpoints.
    5. docs/TROUBLESHOOTING.md: Common issues and fixes (e.g., Cognito attributes, Docker
       build size).
+ - Do not do any changes to aws infrastructure directly, first update the ./infrastructure/template.yaml file and deploy it and wait for the changes to reflect.
 
 ## Coding Style
