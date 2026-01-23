@@ -2,7 +2,7 @@
 set -e
 
 # Configuration (hardcoded for now based on project, could be env vars)
-STACK_NAME="QuotelyInfrastructureV6"
+STACK_NAME="QuotelyInfrastructureV7"
 REGION="ap-south-1"
 DEPLOY_LAMBDA=${1:-"true"}
 
@@ -15,7 +15,8 @@ aws cloudformation deploy \
   --capabilities CAPABILITY_NAMED_IAM \
   --parameter-overrides \
     Environment=dev \
-    ExistingTableName="QuotelyCore-v6" \
+    ExistingTableName="QuotelyCore-v7" \
+    ExistingBucketName="quotely-quotes-v7" \
     CognitoUserPoolId=ap-south-1_BvTJlEG5R \
     CognitoAppClientId=5dqss2ei776k8n7jb9e54le8q4 \
     CognitoAudience=ap-south-1_BvTJlEG5R \
