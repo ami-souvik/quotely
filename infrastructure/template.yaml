@@ -273,7 +273,7 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !GetAtt QuotelyFunction.Arn
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${QuotelyHttpApi}/*/*"
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${QuotelyHttpApi}/*"
 
 Outputs:
   ApiEndpoint:
