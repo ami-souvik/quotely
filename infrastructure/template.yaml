@@ -92,7 +92,7 @@ Resources:
   QuotelyRepository:
     Type: AWS::ECR::Repository
     Properties:
-      RepositoryName: "quotely-serverless"
+      RepositoryName: "quotely-serverless-v6"
 
   # -------------------------------------------------------------------------
   # IAM Role for Lambda
@@ -121,7 +121,7 @@ Resources:
       FunctionName: !Sub "quotely-api"
       PackageType: Image
       Code:
-        ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/quotely-serverless:latest"
+        ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/quotely-serverless-v6:latest"
       Role: !GetAtt LambdaExecutionRole.Arn
       Timeout: 60
       MemorySize: 512
@@ -146,5 +146,5 @@ Outputs:
     Condition: ShouldDeployLambda
   RepoUri:
     Description: "ECR Repository URI"
-    Value: !GetAtt QuotelyRepository.RepositoryUri
+    Value: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/quotely-serverless-v6"
 

@@ -2,9 +2,9 @@
 set -e
 
 REGION="ap-south-1"
-TABLE_NAME="QuotelyCore"
-BUCKET_NAME="quotely-quotes"
-REPO_NAME="quotely-serverless"
+TABLE_NAME="QuotelyCore-v6" # Updated name
+BUCKET_NAME="quotely-quotes-v6" # Updated name
+REPO_NAME="quotely-serverless-v6" # Updated name
 FUNCTION_NAME="quotely-api"
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 
@@ -14,8 +14,8 @@ echo " - DynamoDB Table: $TABLE_NAME"
 echo " - S3 Bucket: $BUCKET_NAME"
 echo " - ECR Repo: $REPO_NAME"
 echo " - Lambda: $FUNCTION_NAME"
-echo "Starting in 5 seconds..."
-sleep 5
+echo "Starting in 10 seconds..." # Increased sleep
+sleep 10
 
 echo "🗑️  Deleting Lambda Function..."
 aws lambda delete-function --function-name $FUNCTION_NAME --region $REGION || echo "Lambda not found or already deleted"
@@ -39,7 +39,7 @@ echo "🚀 Phase 1: Deploying Infrastructure (Without Lambda to create ECR)..."
 
 echo "🔨 Phase 2: Building and Pushing Docker Image..."
 # Reuse logic from deploy-hook.sh basically
-IMAGE_NAME="quotely-serverless"
+IMAGE_NAME="quotely-serverless-v6" # Updated name
 ECR_REPO_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/${IMAGE_NAME}"
 
 docker build --quiet --platform linux/arm64 -t $IMAGE_NAME -f server/Dockerfile server/
