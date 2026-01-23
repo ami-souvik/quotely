@@ -261,14 +261,6 @@ Resources:
       RouteKey: "ANY /{proxy+}"
       Target: !Join ["/", ["integrations", !Ref ApiGatewayLambdaIntegration]]
 
-  ApiGatewayRootRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Condition: ShouldDeployLambda
-    Properties:
-      ApiId: !Ref QuotelyHttpApi
-      RouteKey: "$default"
-      Target: !Join ["/", ["integrations", !Ref ApiGatewayLambdaIntegration]]
-
   ApiGatewayStage:
     Type: AWS::ApiGatewayV2::Stage
     Condition: ShouldDeployLambda
