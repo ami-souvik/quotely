@@ -11,44 +11,8 @@ Parameters:
   
   ExistingTableName:
     Type: String
-    Default: QuotelyCore
+    Default: QuotelyCore-v6
     Description: Name of the existing DynamoDB table
-  
-  ExistingBucketName:
-    Type: String
-    Default: quotely-quotes
-    Description: Name of the existing S3 bucket (or name to create)
-  
-  CognitoUserPoolId:
-    Type: String
-    Description: Cognito User Pool ID (e.g., ap-south-1_xxxxxx)
-  
-  CognitoAppClientId:
-    Type: String
-    Description: Cognito App Client ID
-  
-  CognitoAudience:
-    Type: String
-    Description: Cognito Audience (usually same as App Client ID)
-
-  CorsAllowedOrigins:
-    Type: String
-    Default: "http://localhost:3000,http://127.0.0.1:3000,https://quotely-six.vercel.app"
-    Description: Comma-separated list of allowed origins for CORS
-
-  DjangoSecretKey:
-    Type: String
-    Default: "django-insecure-change-me-in-production"
-    Description: Django Secret Key
-
-  DeployLambda:
-    Type: String
-    Default: "true"
-    AllowedValues: ["true", "false"]
-    Description: Whether to deploy the Lambda function (set to false for initial stack creation to allow image push)
-
-Conditions:
-  ShouldDeployLambda: !Equals [!Ref DeployLambda, "true"]
 
 Resources:
   # -------------------------------------------------------------------------
@@ -64,87 +28,8 @@ Resources:
           AttributeType: S
         - AttributeName: SK
           AttributeType: S
-        - AttributeName: GSI1PK
-          AttributeType: S
-        - AttributeName: GSI1SK
-          AttributeType: S
-        - AttributeName: GSI2PK
-          AttributeType: S
-        - AttributeName: GSI2SK
-          AttributeType: S
       KeySchema:
         - AttributeName: PK
           KeyType: HASH
         - AttributeName: SK
           KeyType: RANGE
-
-  # -------------------------------------------------------------------------
-  # S3 Bucket
-  # -------------------------------------------------------------------------
-  QuotelyBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Ref ExistingBucketName
-
-  # -------------------------------------------------------------------------
-  # ECR Repository
-  # -------------------------------------------------------------------------
-  QuotelyRepository:
-    Type: AWS::ECR::Repository
-    Properties:
-      RepositoryName: "quotely-serverless-v6"
-
-  # -------------------------------------------------------------------------
-  # IAM Role for Lambda
-  # -------------------------------------------------------------------------
-  LambdaExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: !Sub "quotely-api-role-${Environment}"
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-
-  # -------------------------------------------------------------------------
-  # Lambda Function
-  # -------------------------------------------------------------------------
-  QuotelyFunction:
-    Type: AWS::Lambda::Function
-    Condition: ShouldDeployLambda
-    Properties:
-      FunctionName: !Sub "quotely-api"
-      PackageType: Image
-      Code:
-        ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/quotely-serverless-v6:latest"
-      Role: !GetAtt LambdaExecutionRole.Arn
-      Timeout: 60
-      MemorySize: 512
-      Architectures: [ "arm64" ]
-      Environment:
-        Variables:
-          DYNAMO_TABLE_NAME: !Ref QuotelyTable
-          AWS_S3_BUCKET_NAME: !Ref QuotelyBucket
-          COGNITO_USER_POOL: !Ref CognitoUserPoolId
-          COGNITO_APP_CLIENT_ID: !Ref CognitoAppClientId
-          COGNITO_AUDIENCE: !Ref CognitoAudience
-          COGNITO_AWS_REGION: !Ref "AWS::Region"
-          ALLOWED_HOSTS: "quotely-six.vercel.app,localhost,127.0.0.1"
-          # Note: Secrets should ideally be injected via Secrets Manager
-          DJANGO_SECRET_KEY: !Ref DjangoSecretKey
-          CORS_ALLOWED_ORIGINS: !Split [',', !Ref CorsAllowedOrigins]
-
-Outputs:
-  ApiEndpoint:
-    Description: "Lambda Function ARN"
-    Value: !GetAtt QuotelyFunction.Arn
-    Condition: ShouldDeployLambda
-  RepoUri:
-    Description: "ECR Repository URI"
-    Value: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/quotely-serverless-v6"
-
