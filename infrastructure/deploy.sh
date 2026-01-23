@@ -18,5 +18,7 @@ aws cloudformation deploy \
     ExistingTableName="QuotelyCore-v9" \
     ExistingBucketName="quotely-quotes-v9" \
     CognitoUserPoolId=ap-south-1_BvTJlEG5R \
+    CognitoAppClientId=5dqss2ei776k8n7jb9e54le8q4 \
+    CognitoAudience=5dqss2ei776k8n7jb9e54le8q4 \
 
 echo "✅ Stack deployment initiated (check AWS Console for status if async)."
