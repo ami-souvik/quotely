@@ -370,9 +370,13 @@ class DynamoDBService:
             'default_items': data.get('default_items', []),
             'base_margin': Decimal(str(data.get('base_margin', 0.0))),
         }
-        # Let exception propagate to view for better error message in response
-        self.table.put_item(Item=item)
-        return item
+        # Debugging ResourceNotFoundException
+        try:
+            self.table.put_item(Item=item)
+            return item
+        except Exception as e:
+            debug_info = f"Table: {settings.DYNAMO_TABLE_NAME}, Region: {settings.AWS_REGION}"
+            raise Exception(f"{str(e)} | Debug: {debug_info}")
 
     def get_product_family(self, org_id, category, family_id):
         try:
