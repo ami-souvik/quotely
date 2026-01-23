@@ -376,12 +376,9 @@ class DynamoDBService:
             'default_items': data.get('default_items', []),
             'base_margin': Decimal(str(data.get('base_margin', 0.0))),
         }
-        try:
-            self.table.put_item(Item=item)
-            return item
-        except ClientError as e:
-            print(f"Error creating product family: {e.response['Error']['Message']}")
-            return None
+        # Let exception propagate to view for better error message in response
+        self.table.put_item(Item=item)
+        return item
 
     def get_product_family(self, org_id, category, family_id):
         try:
