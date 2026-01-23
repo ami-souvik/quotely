@@ -31,6 +31,11 @@ Parameters:
     Type: String
     Description: Cognito Audience (usually same as App Client ID)
 
+  CorsAllowedOrigins:
+    Type: String
+    Default: "http://localhost:3000,http://127.0.0.1:3000,https://quotely-six.vercel.app"
+    Description: Comma-separated list of allowed origins for CORS
+
   DjangoSecretKey:
     Type: String
     Default: "django-insecure-change-me-in-production"
