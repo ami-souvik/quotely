@@ -26,8 +26,8 @@ echo "🗑️  Deleting S3 Bucket (Emptying first)..."
 aws s3 rm s3://$BUCKET_NAME --recursive --region $REGION || echo "Bucket empty or not accessible"
 aws s3 rb s3://$BUCKET_NAME --region $REGION || echo "Bucket not found or already deleted"
 
-echo "🗑️  Deleting ECR Repository..."
-aws ecr delete-repository --repository-name $REPO_NAME --region $REGION --force || echo "Repo not found or already deleted"
+# echo "🗑️  Deleting ECR Repository..."
+# aws ecr delete-repository --repository-name $REPO_NAME --region $REGION --force || echo "Repo not found or already deleted"
 
 echo "🧹 Cleanup complete."
 

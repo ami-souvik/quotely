@@ -46,15 +46,12 @@ Parameters:
     Default: "django-insecure-change-me-in-production"
     Description: Django Secret Key
 
-  DeployLambda:
+  EcrRepositoryArn:
     Type: String
-    Default: "true"
-    AllowedValues: ["true", "false"]
-    Description: Whether to deploy the Lambda function (set to false for initial stack creation to allow image push)
+    Description: ARN of the ECR repository
 
 Conditions:
   ShouldDeployLambda: !Equals [!Ref DeployLambda, "true"]
-
 Resources:
   # -------------------------------------------------------------------------
   # DynamoDB Table
@@ -115,46 +112,6 @@ Resources:
             MaxAge: 3000
 
   # -------------------------------------------------------------------------
-  # ECR Repository
-  # -------------------------------------------------------------------------
-  QuotelyRepository:
-    Type: AWS::ECR::Repository
-    Properties:
-      RepositoryName: "quotely-serverless-v11"
-      LifecyclePolicy:
-        LifecyclePolicyText: |
-          {
-            "rules": [
-              {
-                "rulePriority": 1,
-                "description": "Keep only last 5 tagged images",
-                "selection": {
-                  "tagStatus": "tagged",
-                  "tagPrefixList": ["v"],
-                  "countType": "imageCountMoreThan",
-                  "countNumber": 5
-                },
-                "action": {
-                  "type": "expire"
-                }
-              },
-               {
-                "rulePriority": 2,
-                "description": "Expire untagged images older than 1 day",
-                "selection": {
-                  "tagStatus": "untagged",
-                  "countType": "sinceImagePushed",
-                  "countUnit": "days",
-                  "countNumber": 1
-                },
-                "action": {
-                  "type": "expire"
-                }
-              }
-            ]
-          }
-
-  # -------------------------------------------------------------------------
   # IAM Role for Lambda
   # -------------------------------------------------------------------------
   LambdaExecutionRole:
@@ -180,7 +137,7 @@ Resources:
                   - ecr:GetDownloadUrlForLayer
                   - ecr:BatchGetImage
                   - ecr:BatchCheckLayerAvailability
-                Resource: !GetAtt QuotelyRepository.Arn
+                Resource: !Ref EcrRepositoryArn
         - PolicyName: QuotelyDataAccess
           PolicyDocument:
             Version: '2012-10-17'
@@ -210,12 +167,11 @@ Resources:
   # -------------------------------------------------------------------------
   QuotelyFunction:
     Type: AWS::Lambda::Function
-    Condition: ShouldDeployLambda
     Properties:
       FunctionName: !Sub "quotely-api"
       PackageType: Image
       Code:
-        ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/quotely-serverless-v11:latest"
+        ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrRepositoryName}:latest"
       Role: !GetAtt LambdaExecutionRole.Arn
       Timeout: 60
       MemorySize: 128
@@ -300,6 +256,4 @@ Outputs:
   ApiGatewayEndpoint:
     Description: "API Gateway Endpoint URL"
     Value: !Sub "https://${QuotelyHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
-  RepoUri:
-    Description: "ECR Repository URI"
-    Value: !GetAtt QuotelyRepository.RepositoryUri
+
