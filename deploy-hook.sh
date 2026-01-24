@@ -2,7 +2,7 @@
 # deploy-hook.sh
 
 # Exit on any error
-set -e
+set -ex
 
 # Configuration
 AWS_REGION=${AWS_REGION:-"ap-south-1"}
