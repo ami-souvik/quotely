@@ -15,6 +15,7 @@ aws cloudformation deploy \
   --parameter-overrides \
     Environment=dev \
     ExistingTableName="QuotelyCore" \
-    ExistingBucketName="quotely-quotes"
+    ExistingBucketName="quotely-quotes" \
+    EcrRepositoryArn="arn:aws:ecr:ap-south-1:295920452208:repository/quotely-serverless"
 
 echo "✅ Stack deployment initiated (check AWS Console for status if async)."
