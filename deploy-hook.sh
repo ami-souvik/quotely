@@ -63,21 +63,26 @@ echo "Region: $AWS_REGION"
 echo "Repo: $ECR_REPO_URI"
 
 # 1. Build Docker Image
+
 echo "🔨 Building Docker image (linux/arm64)..."
+
 docker build --quiet --platform linux/arm64 -t $IMAGE_NAME -f server/Dockerfile server/
 
-# Ensure ECR repository exists
-echo "🔍 Checking for ECR repository: $IMAGE_NAME..."
-if ! aws ecr describe-repositories --repository-names $IMAGE_NAME --region $AWS_REGION > /dev/null 2>&1; then
-    echo "📦 ECR repository $IMAGE_NAME not found. Creating..."
-        aws ecr create-repository --repository-name $IMAGE_NAME --region $AWS_REGION > /dev/null
-        echo "✅ ECR repository $IMAGE_NAME created."
-    else
-        echo "✅ ECR repository $IMAGE_NAME already exists."
-    fi
-    echo "Verifying ECR repository details:"
-    aws ecr describe-repositories --repository-names $IMAGE_NAME --region $AWS_REGION --query 'repositories[0].[repositoryName, repositoryUri]' --output text
-    # 2. Authenticate with ECR
+
+
+# Ensure ECR repository exists (create if not, or ensure it's there)
+
+echo "📦 Ensuring ECR repository: $IMAGE_NAME exists..."
+
+aws ecr create-repository --repository-name $IMAGE_NAME --region $AWS_REGION > /dev/null 2>&1 || true # Create if not exists, ignore if already exists
+
+echo "Verifying ECR repository details:"
+
+aws ecr describe-repositories --repository-names $IMAGE_NAME --region $AWS_REGION --query 'repositories[0].[repositoryName, repositoryUri]' --output text
+
+
+
+# 2. Authenticate with ECR
 echo "🔑 Logging in to ECR..."
 aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
 
