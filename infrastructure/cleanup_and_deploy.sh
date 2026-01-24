@@ -1,8 +1,8 @@
 REGION="ap-south-1"
-TABLE_NAME="QuotelyCore"
-BUCKET_NAME="quotely-quotes"
+TABLE_NAME="QuotelyCoreFinal" # Updated name
+BUCKET_NAME="quotely-quotes-final" # Updated name
 REPO_NAME="quotely-serverless"
-# FUNCTION_NAME="quotely-api"
+FUNCTION_NAME="quotely-api"
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 
 echo "⚠️  WARNING: This will DELETE existing infrastructure to allow CloudFormation to take over."
@@ -10,12 +10,12 @@ echo "Resources to be deleted:"
 echo " - DynamoDB Table: $TABLE_NAME"
 echo " - S3 Bucket: $BUCKET_NAME"
 echo " - ECR Repo: $REPO_NAME"
-# echo " - Lambda: $FUNCTION_NAME"
+echo " - Lambda: $FUNCTION_NAME"
 echo "Starting in 10 seconds..." # Increased sleep
 sleep 10
 
-# echo "🗑️  Deleting Lambda Function..."
-# aws lambda delete-function --function-name $FUNCTION_NAME --region $REGION || echo "Lambda not found or already deleted"
+echo "🗑️  Deleting Lambda Function..."
+aws lambda delete-function --function-name $FUNCTION_NAME --region $REGION || echo "Lambda not found or already deleted"
 
 echo "🗑️  Deleting DynamoDB Table..."
 aws dynamodb delete-table --table-name $TABLE_NAME --region $REGION || echo "Table not found or already deleted"
