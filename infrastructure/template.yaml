@@ -41,6 +41,15 @@ Parameters:
     Default: "django-insecure-change-me-in-production"
     Description: Django Secret Key
 
+  DeployLambda:
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+    Description: Whether to deploy the Lambda function (set to false for initial stack creation to allow image push)
+
+Conditions:
+  ShouldDeployLambda: !Equals [!Ref DeployLambda, "true"]
+
 Resources:
   # -------------------------------------------------------------------------
   # DynamoDB Table
@@ -156,6 +165,7 @@ Resources:
   # -------------------------------------------------------------------------
   QuotelyFunction:
     Type: AWS::Lambda::Function
+    Condition: ShouldDeployLambda
     Properties:
       FunctionName: !Sub "quotely-api"
       PackageType: Image
