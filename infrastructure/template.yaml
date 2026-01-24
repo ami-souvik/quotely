@@ -190,8 +190,7 @@ Resources:
       Name: !Sub "QuotelyHttpApi-${Environment}"
       ProtocolType: HTTP
       CorsConfiguration:
-        AllowOrigins:
-          - !Ref CorsAllowedOrigins
+        AllowOrigins: !Split [',', !Ref CorsAllowedOrigins]
         AllowMethods:
           - GET
           - POST
