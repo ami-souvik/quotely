@@ -50,8 +50,6 @@ Parameters:
     Type: String
     Description: ARN of the ECR repository
 
-Conditions:
-  ShouldDeployLambda: !Equals [!Ref DeployLambda, "true"]
 Resources:
   # -------------------------------------------------------------------------
   # DynamoDB Table
