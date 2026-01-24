@@ -50,7 +50,7 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Ref ExistingBucketName
-      
+
   # -------------------------------------------------------------------------
   # ECR Repository
   # -------------------------------------------------------------------------
