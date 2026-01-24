@@ -19,9 +19,7 @@ aws cloudformation deploy \
     CognitoUserPoolId=ap-south-1_BvTJlEG5R \
     CognitoAppClientId=5dqss2ei776k8n7jb9e54le8q4 \
     CognitoAudience=5dqss2ei776k8n7jb9e54le8q4 \
-    EcrRepositoryName="quotely-serverless" \
-    EcrRepositoryArn="arn:aws:ecr:ap-south-1:295920452208:repository/quotely-serverless" \
-    CorsAllowedOrigins="http://localhost:3000,http://127.00.1:3000,https://quotely-six.vercel.app" \
+    CorsAllowedOrigins="http://localhost:3000,http://127.0.0.1:3000,https://quotely-six.vercel.app" \
     DjangoSecretKey="uRhIGrixN38aQctjbnPWxf+dx7hvDw2VbhJ1P1Ev9LA="
 
 echo "✅ Stack deployment initiated (check AWS Console for status if async)."

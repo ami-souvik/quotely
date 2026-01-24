@@ -36,19 +36,10 @@ Parameters:
     Default: "http://localhost:3000,http://127.0.0.1:3000,https://quotely-six.vercel.app"
     Description: Comma-separated list of allowed origins for CORS
 
-  AllowedHosts:
-    Type: String
-    Default: "*"
-    Description: Comma-separated list of allowed hosts (Django ALLOWED_HOSTS)
-
   DjangoSecretKey:
     Type: String
     Default: "django-insecure-change-me-in-production"
     Description: Django Secret Key
-
-  EcrRepositoryArn:
-    Type: String
-    Description: ARN of the ECR repository
 
 Resources:
   # -------------------------------------------------------------------------
@@ -135,7 +126,7 @@ Resources:
                   - ecr:GetDownloadUrlForLayer
                   - ecr:BatchGetImage
                   - ecr:BatchCheckLayerAvailability
-                Resource: !Ref EcrRepositoryArn
+                Resource: "arn:aws:ecr:ap-south-1:295920452208:repository/quotely-serverless"
         - PolicyName: QuotelyDataAccess
           PolicyDocument:
             Version: '2012-10-17'
@@ -169,7 +160,7 @@ Resources:
       FunctionName: !Sub "quotely-api"
       PackageType: Image
       Code:
-        ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${EcrRepositoryName}:latest"
+        ImageUri: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/quotely-serverless:latest"
       Role: !GetAtt LambdaExecutionRole.Arn
       Timeout: 60
       MemorySize: 128
