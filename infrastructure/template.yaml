@@ -45,12 +45,12 @@ Resources:
   QuotelyBucket:
     Type: AWS::S3::Bucket
     Properties:
-            BucketName: !Ref ExistingBucketName
+      BucketName: !Ref ExistingBucketName
       
-        # -------------------------------------------------------------------------
-        # ECR Repository
-        # -------------------------------------------------------------------------
-        QuotelyRepository:
-          Type: AWS::ECR::Repository
-          Properties:
-            RepositoryName: "quotely-serverless"
+  # -------------------------------------------------------------------------
+  # ECR Repository
+  # -------------------------------------------------------------------------
+  QuotelyRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: "quotely-serverless"
