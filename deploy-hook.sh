@@ -74,7 +74,7 @@ docker build --quiet --platform linux/arm64 -t $IMAGE_NAME -f server/Dockerfile 
 
 echo "📦 Ensuring ECR repository: $IMAGE_NAME exists..."
 
-aws ecr create-repository --repository-name $IMAGE_NAME --region $AWS_REGION > /dev/null 2>&1 || true # Create if not exists, ignore if already exists
+aws ecr create-repository --repository-name $IMAGE_NAME --region $AWS_REGION
 
 echo "Verifying ECR repository details:"
 
