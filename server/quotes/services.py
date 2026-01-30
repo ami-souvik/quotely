@@ -151,10 +151,10 @@ class DynamoDBService:
         <head>
             <title>Quotation for {quote_data.get('customer_name', 'Customer')}</title>
             <style>
-                body {{ font-family: sans-serif; margin: 20mm; }}
+                body {{ font-family: sans-serif; margin: 8mm; }}
                 h1, h2, h3 {{ color: #333; }}
                 table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
-                th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+                th, td {{ font-size: 12px; border: 1px solid #ddd; padding: 8px; text-align: left; }}
                 th {{ background-color: #f2f2f2; }}
                 .total {{ font-weight: bold; }}
             </style>
@@ -363,10 +363,9 @@ class DynamoDBService:
         family_id = str(uuid.uuid4())
         item = {
             'PK': f"ORG#{org_id}",
-            'SK': f"FAMILY#{data.get('category')}#{family_id}",
+            'SK': f"FAMILY#{family_id}",
             'type': 'PRODUCT_FAMILY',
             'name': data.get('name'),
-            'category': data.get('category'), # e.g., 'KITCHEN', 'BEDROOM'
             'default_items': data.get('default_items', []),
             'base_margin': Decimal(str(data.get('base_margin', 0.0))),
         }
@@ -378,12 +377,12 @@ class DynamoDBService:
             debug_info = f"Table: {settings.DYNAMO_TABLE_NAME}, Region: {settings.AWS_REGION}"
             raise Exception(f"{str(e)} | Debug: {debug_info}")
 
-    def get_product_family(self, org_id, category, family_id):
+    def get_product_family(self, org_id, family_id):
         try:
             response = self.table.get_item(
                 Key={
                     'PK': f"ORG#{org_id}",
-                    'SK': f"FAMILY#{category}#{family_id}"
+                    'SK': f"FAMILY#{family_id}"
                 }
             )
             return response.get('Item')
@@ -391,14 +390,13 @@ class DynamoDBService:
             print(f"Error getting product family: {e.response['Error']['Message']}")
             return None
 
-    def update_product_family(self, org_id, category, family_id, data):
-        update_expression = "SET #n = :name, category = :category, default_items = :default_items, base_margin = :base_margin"
+    def update_product_family(self, org_id, family_id, data):
+        update_expression = "SET #n = :name, default_items = :default_items, base_margin = :base_margin REMOVE category"
         expression_attribute_names = {
             '#n': 'name'
         }
         expression_attribute_values = {
             ':name': data.get('name'),
-            ':category': data.get('category'),
             ':default_items': data.get('default_items'),
             ':base_margin': Decimal(str(data.get('base_margin', 0.0))),
         }
@@ -406,7 +404,7 @@ class DynamoDBService:
             response = self.table.update_item(
                 Key={
                     'PK': f"ORG#{org_id}",
-                    'SK': f"FAMILY#{category}#{family_id}"
+                    'SK': f"FAMILY#{family_id}"
                 },
                 UpdateExpression=update_expression,
                 ExpressionAttributeNames=expression_attribute_names,
@@ -418,12 +416,12 @@ class DynamoDBService:
             print(f"Error updating product family: {e.response['Error']['Message']}")
             return None
 
-    def delete_product_family(self, org_id, category, family_id):
+    def delete_product_family(self, org_id, family_id):
         try:
             self.table.delete_item(
                 Key={
                     'PK': f"ORG#{org_id}",
-                    'SK': f"FAMILY#{category}#{family_id}"
+                    'SK': f"FAMILY#{family_id}"
                 }
             )
             return True
@@ -493,14 +491,17 @@ class DynamoDBService:
         product_id = str(uuid.uuid4())
         family_id = data.get('family_id')
 
+        custom_fields = data.get('custom_fields', {})
+        custom_fields = self._convert_floats_to_decimals(custom_fields)
+
         item = {
             'PK': f"ORG#{org_id}",
             'SK': f"PRODUCT#{product_id}",
             'type': 'PRODUCT',
             'name': data.get('name'),
-            'description': data.get('description'),
             'price': Decimal(str(data.get('price'))),
             'family_id': str(family_id) if family_id else None,
+            'custom_fields': custom_fields,
         }
         # Add GSI for family_id lookup if family_id is present
         if item['family_id']:
@@ -542,15 +543,18 @@ class DynamoDBService:
             return []
 
     def update_product(self, org_id, product_id, data):
-        update_expression = "SET #n = :name, description = :description, price = :price, family_id = :family_id"
+        custom_fields = data.get('custom_fields', {})
+        custom_fields = self._convert_floats_to_decimals(custom_fields)
+
+        update_expression = "SET #n = :name, price = :price, family_id = :family_id, custom_fields = :custom_fields REMOVE description"
         expression_attribute_names = {
             '#n': 'name'
         }
         expression_attribute_values = {
             ':name': data.get('name'),
-            ':description': data.get('description'),
             ':price': Decimal(str(data.get('price'))),
-            ':family_id': data.get('family_id'),
+            ':family_id': str(data.get('family_id')) if data.get('family_id') else None,
+            ':custom_fields': custom_fields,
         }
         try:
             response = self.table.update_item(
@@ -599,7 +603,7 @@ class DynamoDBService:
             print(f"Error deleting product: {e.response['Error']['Message']}")
             return False
 
-    def get_products_by_family(self, org_id, category, family_id):
+    def get_products_by_family(self, org_id, family_id):
         """
         This method requires a Global Secondary Index (GSI) on the table.
         GSI Name: Family-Product-Index (or similar)
@@ -623,3 +627,29 @@ class DynamoDBService:
             # If the index doesn't exist, this will fail.
             print(f"Error fetching products by family (check for GSI 'Family-Product-Index'): {e.response['Error']['Message']}")
             return []
+    def get_product_settings(self, org_id):
+        try:
+            response = self.table.get_item(
+                Key={
+                    'PK': f"ORG#{org_id}",
+                    'SK': "SETTINGS#PRODUCT"
+                }
+            )
+            return response.get('Item', {}).get('columns', [])
+        except ClientError as e:
+            print(f"Error getting product settings: {e.response['Error']['Message']}")
+            return []
+
+    def update_product_settings(self, org_id, columns):
+        try:
+            self.table.put_item(
+                Item={
+                    'PK': f"ORG#{org_id}",
+                    'SK': "SETTINGS#PRODUCT",
+                    'columns': columns
+                }
+            )
+            return columns
+        except ClientError as e:
+            print(f"Error updating product settings: {e.response['Error']['Message']}")
+            return None

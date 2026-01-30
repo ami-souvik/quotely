@@ -2,7 +2,6 @@ export interface ProductFamilySerializer {
   id: string;
   PK: string;
   SK: string;
-  category: string;
   name: string;
   description?: string;
   default_items: any[];
@@ -12,9 +11,18 @@ export interface ProductFamilySerializer {
 export interface Product {
   id: string;
   name: string;
-  description?: string;
   price: number;
   family_id?: string | null;
+  custom_fields?: Record<string, any>;
+}
+
+export interface ProductColumn {
+  key: string;
+  label: string;
+  type: 'text' | 'number' | 'select' | 'boolean' | 'date' | 'formula';
+  editable: boolean;
+  options?: string[];
+  formula?: string;
 }
 
 export interface QuoteItem {

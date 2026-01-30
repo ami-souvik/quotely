@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from .services import DynamoDBService
-from .serializers import ProductFamilySerializer, MasterItemSerializer, ProductSerializer
+from .serializers import ProductFamilySerializer, MasterItemSerializer, ProductSerializer, ProductSettingsSerializer
 from .permissions import IsAdmin
 from weasyprint import HTML, CSS
 from io import BytesIO
@@ -43,21 +43,55 @@ class ProductFamilyListView(APIView):
                 return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class ProductFamilyDetailView(APIView):
+class ProductSettingsView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsAdmin]
 
-    def get(self, request, category, family_id):
+    def get(self, request):
         service = DynamoDBService()
         org_id = get_org_id(request)
         if not org_id:
             return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
         
-        family = service.get_product_family(org_id, category, family_id)
+        columns = service.get_product_settings(org_id)
+        # Default columns if none exist
+        if not columns:
+             columns = [
+                 {"key": "name", "label": "Name", "type": "text", "editable": True},
+                 {"key": "price", "label": "Price", "type": "number", "editable": True},
+                 {"key": "family", "label": "Family", "type": "select", "editable": True},
+             ]
+        
+        return Response({"columns": columns})
+
+    def post(self, request):
+        service = DynamoDBService()
+        org_id = get_org_id(request)
+        if not org_id:
+            return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = ProductSettingsSerializer(data=request.data)
+        if serializer.is_valid():
+            updated_columns = service.update_product_settings(org_id, serializer.validated_data['columns'])
+            if updated_columns is not None:
+                return Response({"columns": updated_columns})
+            return Response({"error": "Failed to update product settings"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ProductFamilyDetailView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+
+    def get(self, request, family_id):
+        service = DynamoDBService()
+        org_id = get_org_id(request)
+        if not org_id:
+            return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        family = service.get_product_family(org_id, family_id)
         if family:
             return Response(family)
         return Response({"error": "Product family not found"}, status=status.HTTP_404_NOT_FOUND)
 
-    def put(self, request, category, family_id):
+    def put(self, request, family_id):
         service = DynamoDBService()
         org_id = get_org_id(request)
         if not org_id:
@@ -65,19 +99,19 @@ class ProductFamilyDetailView(APIView):
         
         serializer = ProductFamilySerializer(data=request.data)
         if serializer.is_valid():
-            updated_family = service.update_product_family(org_id, category, family_id, serializer.validated_data)
+            updated_family = service.update_product_family(org_id, family_id, serializer.validated_data)
             if updated_family:
                 return Response(updated_family)
             return Response({"error": "Failed to update product family"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def delete(self, request, category, family_id):
+    def delete(self, request, family_id):
         service = DynamoDBService()
         org_id = get_org_id(request)
         if not org_id:
             return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
         
-        if service.delete_product_family(org_id, category, family_id):
+        if service.delete_product_family(org_id, family_id):
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response({"error": "Failed to delete product family"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -337,12 +371,12 @@ class ProductDetailView(APIView):
 class ProductListByFamilyView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def get(self, request, category, family_id):
+    def get(self, request, family_id):
         service = DynamoDBService()
         org_id = get_org_id(request)
         if not org_id:
             return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
         
-        products = service.get_products_by_family(org_id, category, family_id)
+        products = service.get_products_by_family(org_id, family_id)
         serializer = ProductSerializer(products, many=True)
         return Response(serializer.data)

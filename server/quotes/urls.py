@@ -4,17 +4,18 @@ from .views import (
     ProductFamilyDetailView, MasterItemDetailView,
     QuotationGeneratePDFView, QuotationPresignedURLView,
     UserQuotationListView, ProductListView, ProductDetailView, ProductListByFamilyView,
-    QuotationDetailView
+    QuotationDetailView, ProductSettingsView
 )
 
 urlpatterns = [
     # Product Family Endpoints
     path('families/', ProductFamilyListView.as_view(), name='family-list'),
-    path('families/<str:category>/<uuid:family_id>/', ProductFamilyDetailView.as_view(), name='family-detail'),
-    path('families/<str:category>/<uuid:family_id>/products/', ProductListByFamilyView.as_view(), name='product-list-by-family'),
+    path('families/<uuid:family_id>/', ProductFamilyDetailView.as_view(), name='family-detail'),
+    path('families/<uuid:family_id>/products/', ProductListByFamilyView.as_view(), name='product-list-by-family'),
 
     # Product Endpoints
     path('products/', ProductListView.as_view(), name='product-list'),
+    path('products/settings/', ProductSettingsView.as_view(), name='product-settings'),
     path('products/<uuid:product_id>/', ProductDetailView.as_view(), name='product-detail'),
 
     # Master Item Endpoints

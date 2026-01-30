@@ -2,7 +2,6 @@ from rest_framework import serializers
 
 class ProductFamilySerializer(serializers.Serializer):
     id = serializers.SerializerMethodField()
-    category = serializers.CharField(max_length=100)
     name = serializers.CharField(max_length=255)
     description = serializers.CharField(max_length=500, required=False, allow_blank=True)
     default_items = serializers.JSONField(binary=False)
@@ -32,9 +31,9 @@ class MasterItemSerializer(serializers.Serializer):
 class ProductSerializer(serializers.Serializer):
     id = serializers.SerializerMethodField()
     name = serializers.CharField(max_length=255)
-    description = serializers.CharField(required=False, allow_blank=True)
     price = serializers.DecimalField(max_digits=10, decimal_places=2)
     family_id = serializers.UUIDField(required=False, allow_null=True)
+    custom_fields = serializers.DictField(required=False, allow_null=True)
 
     def get_id(self, obj):
         sk = obj.get('SK', '')
@@ -42,4 +41,9 @@ class ProductSerializer(serializers.Serializer):
             return sk.split('#')[-1]
         except IndexError:
             return None
+
+class ProductSettingsSerializer(serializers.Serializer):
+    columns = serializers.ListField(
+        child=serializers.DictField()
+    )
     

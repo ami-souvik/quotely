@@ -4,7 +4,6 @@ import { ProductFamilySerializer } from '../types';
 import { User } from 'oidc-client-ts';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-// const API_BASE_URL = 'https://af3zoi4ci0.execute-api.ap-south-1.amazonaws.com/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
