@@ -142,7 +142,7 @@ class DynamoDBService:
             print(f"Error updating quotation S3 link: {e.response['Error']['Message']}")
             return None
     
-    def generate_quote_pdf_html(self, quote_data, org_name="Quotely Org"):
+    def generate_quote_pdf_html(self, quote_data, org_name="Quotely Org", pdf_settings=None):
         # This is a very basic HTML template.
         # For production, this should be a proper Django template or more sophisticated.
         html_content = f"""
@@ -154,63 +154,133 @@ class DynamoDBService:
                 body {{ font-family: sans-serif; margin: 8mm; }}
                 h1, h2, h3 {{ color: #333; }}
                 table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
-                th, td {{ font-size: 12px; border: 1px solid #ddd; padding: 8px; text-align: left; }}
-                th {{ background-color: #f2f2f2; }}
+                th, td {{ font-size: 12px; padding: 6px 8px; text-align: left; }}
+                th {{ border-top: 1px solid #000; border-bottom: 1px solid #000; background-color: #f2f2f2; }}
+                td {{ border-bottom: 1px solid #ddd; }}
+                p {{ font-size: 12px; margin: 0; }}
                 .total {{ font-weight: bold; }}
             </style>
         </head>
         <body>
-            <h1>Quotation</h1>
-            <p><strong>Organization:</strong> {org_name}</p>
-            <p><strong>Customer Name:</strong> {quote_data.get('customer_name', 'N/A')}</p>
-            <p><strong>Created At:</strong> {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-            <h2>Items</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center;">
+                <div style="display: flex; align-items: center;">
+                    <img src="https://www.reflectyourvibe.in/images/favicon.svg" alt="Logo" style="width: 60px; height: 60px; object-position: left; object-fit: contain;">
+                    <div>
+                        <p style="font-size: 24px; margin-bottom: 6px"><strong>{org_name}</strong></p>
+                        <p style="padding-left: 2px"><strong>Contact:</strong> 1234567890</p>
+                        <p style="padding-left: 2px"><strong>Email:</strong> dummy@eg.com</p>
+                    </div>
+                </div>
+                <h1 style="text-align: right;">Quotation</h1>
+            </div>
+            <hr />
+            <div style="display: grid; grid-template-columns: 1fr 1fr; align-items: center;">
+                <div>
+                    <p><strong>To,</strong></p>
+                    <p><strong>{quote_data.get('customer_name', 'Customer')}</strong></p>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr;">
+                    <p><strong>Quotation#</strong></p>
+                    <p>Quote-1</p>
+                    <p><strong>Created At:</strong></p>
+                    <p>{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+                </div>
+            </div>
+            <p style="margin: 28px 0px 12px 0px;">Dear Sir/Ma'am,</p>
+            <p>Thank you for considering us for your needs. Please find the quotation below:</p>
         """
 
         for family in quote_data.get('families', []):
-            html_content += f"<h3>{family.get('family_name')} ({family.get('category')})</h3>"
+            html_content += f"<h3>{family.get('family_name')}</h3>"
             html_content += """
+            """
+            
+            # Use columns from settings or default
+            columns = pdf_settings.get('columns', []) if pdf_settings else []
+            if not columns:
+                columns = [
+                    {'key': 'item', 'label': 'DESCRIPTION'},
+                    {'key': 'qty', 'label': 'QTY', 'align': 'end'},
+                    {'key': 'unit_price', 'label': 'PRICE', 'align': 'end'},
+                    {'key': 'total', 'label': 'TOTAL', 'align': 'end'}
+                ]
+
+            html_content += f"""
             <table>
                 <thead>
                     <tr>
-                        <th>Item</th>
-                        <th>Qty</th>
-                        <th>Unit Price</th>
-                        <th>Unit Type</th>
-                        <th>Total</th>
+            """
+            for col in columns:
+                align = col.get('align', 'left')
+                if col['key'] in ['qty', 'unit_price', 'total', 'price']:
+                    align = 'end'
+                # Override generic align if specific keys
+                
+                style = f'style="text-align: {align};"'
+                if col['key'] == 'item' or col['key'] == 'name' or col['label'] == 'DESCRIPTION':
+                    style = 'style="min-width: 200px;"'
+                
+                html_content += f'<th {style}>{col["label"]}</th>'
+            
+            html_content += """
                     </tr>
                 </thead>
                 <tbody>
             """
             for item in family.get('items', []):
+                html_content += "<tr>"
+                for col in columns:
+                    val = ""
+                    align = col.get('align', 'left')
+                    if col['key'] in ['qty', 'unit_price', 'total', 'price', 'base_margin', 'sub_total']:
+                        align = 'end'
+                    
+                    key = col['key']
+                    # Mapping logic
+                    if key == 'item' or key == 'name':
+                         val = item.get('name', '')
+                    elif key == 'qty':
+                         val = f"{float(item.get('qty', 0)):.2f} {str(item.get('unit_type', '')).upper()}"
+                    elif key == 'unit_type' or key == 'unit':
+                         val = str(item.get('unit_type', '')).upper()
+                    elif key == 'family' or key == 'family_name':
+                         val = family.get('family_name', '')
+                    elif key == 'unit_price' or key == 'price':
+                         val = f"INR {float(item.get('unit_price', 0)):.2f}"
+                    elif key == 'total':
+                         val = f"INR {float(item.get('total', 0)):.2f}"
+                    else:
+                         # Try to find in custom fields or root
+                         val = item.get('custom_fields', {}).get(key, item.get(key, ''))
+                    
+                    html_content += f'<td style="text-align: {align};">{val}</td>'
+                html_content += "</tr>"
+
+            colspan = len(columns) - 1
+            html_content += f"""
+                    <tr>
+                        <td colspan="{colspan}" class="total">SUB TOTAL</td>
+                        <td class="total" style="text-align: end;">INR {float(family.get('subtotal', 0.0)):.2f}</td>
+                    </tr>
+            """
+            if float(family.get('margin_applied', 0)) > 0:
                 html_content += f"""
                     <tr>
-                        <td>{item.get('name')}</td>
-                        <td>{float(item.get('qty', 0)):.2f}</td>
-                        <td>INR {float(item.get('unit_price', 0)):.2f}</td>
-                        <td>{item.get('unit_type')}</td>
-                        <td>INR {float(item.get('total', 0)):.2f}</td>
+                        <td colspan="{colspan}" class="total">Margin Applied ({float(family.get('margin_applied', 0)) * 100:.0f}%)</td>
+                        <td class="total" style="text-align: end;">INR {float(family.get('subtotal', 0.0)) * float(family.get('margin_applied', 0.0)):.2f}</td>
                     </tr>
                 """
             html_content += f"""
                     <tr>
-                        <td colspan="4" class="total">Family Subtotal</td>
-                        <td class="total">INR {float(family.get('subtotal', 0.0)):.2f}</td>
-                    </tr>
-                    <tr>
-                        <td colspan="4" class="total">Margin Applied ({float(family.get('margin_applied', 0)) * 100:.0f}%)</td>
-                        <td class="total">INR {float(family.get('subtotal', 0.0)) * float(family.get('margin_applied', 0.0)):.2f}</td>
-                    </tr>
-                    <tr>
-                        <td colspan="4" class="total">Family Total (incl. margin)</td>
-                        <td class="total">INR {float(family.get('subtotal', 0.0)) * (1 + float(family.get('margin_applied', 0.0))):.2f}</td>
+                        <td colspan="{colspan}" class="total">TOTAL (incl. margin)</td>
+                        <td class="total" style="text-align: end;">INR {float(family.get('subtotal', 0.0)) * (1 + float(family.get('margin_applied', 0.0))):.2f}</td>
                     </tr>
                 </tbody>
             </table>
             """
         
         html_content += f"""
-            <h2>Grand Total: INR {float(quote_data.get('total_amount', 0.0)):.2f}</h2>
+            <h2>GRAND TOTAL: INR {float(quote_data.get('total_amount', 0.0)):.2f}</h2>
             </body>
             </html>
         """
@@ -652,4 +722,32 @@ class DynamoDBService:
             return columns
         except ClientError as e:
             print(f"Error updating product settings: {e.response['Error']['Message']}")
+            return None
+            return None
+
+    def get_template_settings(self, org_id):
+        try:
+            response = self.table.get_item(
+                Key={
+                    'PK': f"ORG#{org_id}",
+                    'SK': "SETTINGS#TEMPLATE"
+                }
+            )
+            return response.get('Item', {}).get('columns', [])
+        except ClientError as e:
+            print(f"Error getting template settings: {e.response['Error']['Message']}")
+            return []
+
+    def update_template_settings(self, org_id, columns):
+        try:
+            self.table.put_item(
+                Item={
+                    'PK': f"ORG#{org_id}",
+                    'SK': "SETTINGS#TEMPLATE",
+                    'columns': columns
+                }
+            )
+            return columns
+        except ClientError as e:
+            print(f"Error updating template settings: {e.response['Error']['Message']}")
             return None

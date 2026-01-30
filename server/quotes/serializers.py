@@ -46,4 +46,9 @@ class ProductSettingsSerializer(serializers.Serializer):
     columns = serializers.ListField(
         child=serializers.DictField()
     )
+
+class TemplateSettingsSerializer(serializers.Serializer):
+    columns = serializers.ListField(
+        child=serializers.DictField()
+    )
     

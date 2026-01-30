@@ -2,10 +2,81 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from .services import DynamoDBService
-from .serializers import ProductFamilySerializer, MasterItemSerializer, ProductSerializer, ProductSettingsSerializer
+from .serializers import ProductFamilySerializer, MasterItemSerializer, ProductSerializer, ProductSettingsSerializer, TemplateSettingsSerializer
 from .permissions import IsAdmin
 from weasyprint import HTML, CSS
 from io import BytesIO
+
+# ... (Previous code)
+
+class TemplateSettingsView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdmin]
+
+    def get(self, request):
+        service = DynamoDBService()
+        org_id = get_org_id(request)
+        if not org_id:
+            return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        columns = service.get_template_settings(org_id)
+        # Default to standard if empty
+        if not columns:
+             columns = [
+                    {'key': 'name', 'label': 'DESCRIPTION'},
+                    {'key': 'qty', 'label': 'QTY', 'align': 'end'},
+                    {'key': 'price', 'label': 'PRICE', 'align': 'end'},
+                    {'key': 'total', 'label': 'TOTAL', 'align': 'end'}
+                ]
+        
+        return Response({"columns": columns})
+
+    def post(self, request):
+        service = DynamoDBService()
+        org_id = get_org_id(request)
+        if not org_id:
+            return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = TemplateSettingsSerializer(data=request.data)
+        if serializer.is_valid():
+            updated_columns = service.update_template_settings(org_id, serializer.validated_data['columns'])
+            if updated_columns is not None:
+                return Response({"columns": updated_columns})
+            return Response({"error": "Failed to update template settings"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class QuotationGeneratePDFView(APIView):
+    def post(self, request, quote_id):
+        service = DynamoDBService()
+        org_id = get_org_id(request)
+        
+        if not org_id:
+            return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        quote = service.get_quotation(org_id, quote_id)
+        if not quote:
+            return Response({"error": "Quotation not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        try:
+            # Use org name from user if available, else default
+            org_name = request.user.organization.name if request.user.is_authenticated and hasattr(request.user, 'organization') and request.user.organization else "Quotely Org"
+            
+            # Fetch template settings
+            template_columns = service.get_template_settings(org_id)
+            pdf_settings = {'columns': template_columns} if template_columns else None
+
+            # Assuming quote['snapshot'] contains the data needed for PDF
+            html_content = service.generate_quote_pdf_html(quote['snapshot'], org_name=org_name, pdf_settings=pdf_settings)
+            pdf_bytes = HTML(string=html_content).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm; }')])
+            
+            s3_pdf_link = service.upload_pdf_to_s3(BytesIO(pdf_bytes), org_id, quote_id)
+            
+            if s3_pdf_link:
+                service.update_quotation_s3_link(org_id, quote_id, s3_pdf_link)
+                return Response({"message": "PDF generated and uploaded", "s3_pdf_link": s3_pdf_link}, status=status.HTTP_200_OK)
+            return Response({"error": "Failed to upload PDF to S3"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            print(f"Error generating PDF: {e}")
+            return Response({"error": f"Error generating PDF: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 def get_org_id(request):
     if request.user.is_authenticated and hasattr(request.user, 'organization') and request.user.organization:
@@ -232,35 +303,50 @@ class QuotationDetailView(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response({"error": "Failed to delete quotation"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class QuotationGeneratePDFView(APIView):
-    def post(self, request, quote_id):
+
+
+class QuotationPreviewHTMLView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
         service = DynamoDBService()
-        org_id = get_org_id(request)
         
-        if not org_id:
-            return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        quote = service.get_quotation(org_id, quote_id)
-        if not quote:
-            return Response({"error": "Quotation not found"}, status=status.HTTP_404_NOT_FOUND)
+        dummy_data = {
+            "customer_name": "John Doe",
+            "total_amount": 15000.00,
+            "families": [
+                {
+                    "family_name": "Living Room Furniture",
+                    "category": "Furniture",
+                    "subtotal": 10000.00,
+                    "margin_applied": 0.20,
+                    "items": [
+                        {"name": "Sofa", "qty": 1, "unit_price": 5000.00, "unit_type": "pcs", "total": 5000.00},
+                        {"name": "Coffee Table", "qty": 1, "unit_price": 2000.00, "unit_type": "pcs", "total": 2000.00},
+                        {"name": "TV Stand", "qty": 1, "unit_price": 3000.00, "unit_type": "pcs", "total": 3000.00}
+                    ]
+                },
+                {
+                    "family_name": "Painting Services",
+                    "category": "Services",
+                    "subtotal": 2500.00,
+                    "margin_applied": 0.15,
+                    "items": [
+                        {"name": "Wall Painting", "qty": 500, "unit_price": 5.00, "unit_type": "sqft", "total": 2500.00}
+                    ]
+                }
+            ]
+        }
         
         try:
-            # Use org name from user if available, else default
-            org_name = request.user.organization.name if request.user.is_authenticated and hasattr(request.user, 'organization') and request.user.organization else "Quotely Org"
+            html_content = service.generate_quote_pdf_html(dummy_data, org_name="Reflect Your Vibe")
             
-            # Assuming quote['snapshot'] contains the data needed for PDF
-            html_content = service.generate_quote_pdf_html(quote['snapshot'], org_name=org_name)
-            pdf_bytes = HTML(string=html_content).write_pdf(stylesheets=[CSS(string='@page { size: A4; margin: 1cm; }')])
-            
-            s3_pdf_link = service.upload_pdf_to_s3(BytesIO(pdf_bytes), org_id, quote_id)
-            
-            if s3_pdf_link:
-                service.update_quotation_s3_link(org_id, quote_id, s3_pdf_link)
-                return Response({"message": "PDF generated and uploaded", "s3_pdf_link": s3_pdf_link}, status=status.HTTP_200_OK)
-            return Response({"error": "Failed to upload PDF to S3"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            from django.http import HttpResponse
+            return HttpResponse(html_content, content_type="text/html")
         except Exception as e:
-            print(f"Error generating PDF: {e}")
-            return Response({"error": f"Error generating PDF: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            return Response({"error": f"Error generating HTML: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class QuotationPresignedURLView(APIView):
     def get(self, request, quote_id):

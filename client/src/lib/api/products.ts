@@ -27,7 +27,7 @@ export const getProductsByFamily = async (family: { id: string }): Promise<Produ
 
 export const getProductSettings = async (): Promise<ProductColumn[]> => {
     const response = await api.get('/quotes/products/settings/');
-    return response.data.columns;
+    return response.data.columns || [];
 };
 
 export const updateProductSettings = async (columns: ProductColumn[]): Promise<ProductColumn[]> => {

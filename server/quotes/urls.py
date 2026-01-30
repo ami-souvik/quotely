@@ -2,9 +2,9 @@ from django.urls import path
 from .views import (
     ProductFamilyListView, MasterItemListView, QuotationCreateView,
     ProductFamilyDetailView, MasterItemDetailView,
-    QuotationGeneratePDFView, QuotationPresignedURLView,
+    QuotationGeneratePDFView, QuotationPresignedURLView, QuotationPreviewHTMLView,
     UserQuotationListView, ProductListView, ProductDetailView, ProductListByFamilyView,
-    QuotationDetailView, ProductSettingsView
+    QuotationDetailView, ProductSettingsView, TemplateSettingsView
 )
 
 urlpatterns = [
@@ -25,7 +25,9 @@ urlpatterns = [
     # Quotation Endpoints
     path('create/', QuotationCreateView.as_view(), name='quotation-create'),
     path('mine/', UserQuotationListView.as_view(), name='user-quotation-list'), # New URL
+    path('templates/settings/', TemplateSettingsView.as_view(), name='template-settings'),
     path('<str:quote_id>/', QuotationDetailView.as_view(), name='quotation-detail'),
     path('<str:quote_id>/generate-pdf/', QuotationGeneratePDFView.as_view(), name='quotation-generate-pdf'),
+    path('<str:quote_id>/preview-html/', QuotationPreviewHTMLView.as_view(), name='quotation-preview-html'),
     path('<str:quote_id>/presigned-url/', QuotationPresignedURLView.as_view(), name='quotation-presigned-url'),
 ]

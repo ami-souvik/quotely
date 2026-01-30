@@ -298,7 +298,7 @@ const QuoteEditorContent: React.FC = () => {
           </div>
         ))}
         <div className="mt-8 pt-4 border-t-2 border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4 pb-20 md:pb-0">
-          <h3 className="text-2xl font-bold text-gray-800">Grand Total: INR {calculateGrandTotal().toFixed(2)}</h3>
+          <h3 className="text-2xl font-bold text-gray-800">GRAND TOTAL: INR {calculateGrandTotal().toFixed(2)}</h3>
           <button
             onClick={handleSaveQuote}
             disabled={loading}

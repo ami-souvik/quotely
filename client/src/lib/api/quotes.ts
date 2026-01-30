@@ -45,3 +45,13 @@ export const getPresignedUrl = async (id: string): Promise<string> => {
   const response = await api.get(`/quotes/${id}/presigned-url/`);
   return response.data.presigned_url;
 };
+
+export const getTemplateSettings = async (): Promise<any[]> => {
+  const response = await api.get('/quotes/templates/settings/');
+  return response.data.columns || [];
+};
+
+export const updateTemplateSettings = async (columns: any[]): Promise<any[]> => {
+  const response = await api.post('/quotes/templates/settings/', { columns });
+  return response.data.columns;
+};

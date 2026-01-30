@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getQuote, generatePdf, getPresignedUrl, Quote } from '@/lib/api/quotes';
+import { getQuote, generatePdf, getPresignedUrl, Quote, getTemplateSettings } from '@/lib/api/quotes';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,20 +18,36 @@ const QuoteDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [columns, setColumns] = useState<any[]>([]);
 
   useEffect(() => {
     if (id) {
-      const fetchQuote = async () => {
+      const fetchData = async () => {
         try {
-          const fetchedQuote = await getQuote(id);
+          const [fetchedQuote, templateSettings] = await Promise.all([
+            getQuote(id),
+            getTemplateSettings()
+          ]);
           setQuote(fetchedQuote);
+
+          if (templateSettings && templateSettings.length > 0) {
+            setColumns(templateSettings);
+          } else {
+            setColumns([
+              { key: 'name', label: 'Item' },
+              { key: 'qty', label: 'Qty' },
+              { key: 'price', label: 'Price' },
+              { key: 'total', label: 'Total' }
+            ]);
+          }
+
         } catch (err: any) {
           setError(err.message || 'Failed to fetch quote.');
         } finally {
           setLoading(false);
         }
       };
-      fetchQuote();
+      fetchData();
     }
   }, [id]);
 
@@ -70,6 +86,18 @@ const QuoteDetailPage: React.FC = () => {
     }
   };
 
+  const renderCell = (item: any, family: any, colKey: string) => {
+    if (colKey === 'name' || colKey === 'item') return item.name;
+    if (colKey === 'qty') return `${item.qty} ${item.unit_type || ''}`;
+    if (colKey === 'unit_type' || colKey === 'unit') return item.unit_type;
+    if (colKey === 'family' || colKey === 'family_name') return family.family_name;
+    if (colKey === 'unit_price' || colKey === 'price') return Number(item.unit_price).toFixed(2);
+    if (colKey === 'total') return Number(item.total).toFixed(2);
+
+    // Custom fields
+    return item.custom_fields?.[colKey] || item[colKey] || '';
+  };
+
   if (loading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>;
   if (error) return <div className="text-red-500 p-8">{error}</div>;
   if (!quote) return <div className="p-8">Quote not found.</div>;
@@ -78,6 +106,7 @@ const QuoteDetailPage: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-4">
+      {/* ... Header buttons ... */}
       <div className="flex justify-between items-center mb-4">
         <Button variant="ghost" onClick={() => router.back()}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
@@ -122,31 +151,25 @@ const QuoteDetailPage: React.FC = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-100">
                   <tr>
-                    <th scope="col" className="p-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[100px]">Item</th>
-                    <th scope="col" className="p-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[50px]">Qty</th>
-                    <th scope="col" className="p-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[100px]">Price</th>
-                    <th scope="col" className="p-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[80px] sticky right-0 bg-gray-100 z-10 shadow-[-4px_0_4px_-4px_rgba(0,0,0,0.1)]">Total</th>
+                    {columns.map((col, idx) => (
+                      <th key={col.key} scope="col" className={`p-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase ${col.key === 'total' ? 'sticky right-0 bg-gray-100 z-10 shadow-[-4px_0_4px_-4px_rgba(0,0,0,0.1)]' : ''} ${idx === 0 ? 'min-w-[150px]' : 'min-w-[80px]'}`}>
+                        {col.label}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {family.items?.map((item: any, idx: number) => (
                     <tr key={idx}>
-                      <td className="p-2 md:px-6 md:py-4 whitespace-nowrap text-xs border-b">
-                        {item.name}
-                      </td>
-                      <td className="p-2 md:px-6 md:py-4 whitespace-nowrap text-xs border-b">
-                        {item.qty} {item.unit_type}
-                      </td>
-                      <td className="p-2 md:px-6 md:py-4 whitespace-nowrap text-xs border-b">
-                        {item.unit_price}
-                      </td>
-                      <td className="p-2 md:px-6 md:py-4 whitespace-nowrap text-xs border-b sticky right-0 bg-white z-10 shadow-[-4px_0_4px_-4px_rgba(0,0,0,0.1)] text-right">
-                        {Number(item.total).toFixed(2)}
-                      </td>
+                      {columns.map(col => (
+                        <td key={col.key} className={`p-2 md:px-6 md:py-4 whitespace-nowrap text-xs border-b ${col.key === 'total' ? 'sticky right-0 bg-white z-10 shadow-[-4px_0_4px_-4px_rgba(0,0,0,0.1)] text-right' : ''}`}>
+                          {renderCell(item, family, col.key)}
+                        </td>
+                      ))}
                     </tr>
                   ))}
                   <tr className="bg-muted/50 font-medium">
-                    <td colSpan={3} className="p-2 md:px-6 md:py-4 text-right">Subtotal</td>
+                    <td colSpan={Math.max(1, columns.length - 1)} className="p-2 md:px-6 md:py-4 text-right">Subtotal</td>
                     <td className="p-2 md:px-6 md:py-4 text-right sticky right-0 bg-muted/50 z-10 shadow-[-4px_0_4px_-4px_rgba(0,0,0,0.1)]">{family.subtotal?.toFixed(2)}</td>
                   </tr>
                 </tbody>
@@ -159,7 +182,7 @@ const QuoteDetailPage: React.FC = () => {
       <Card>
         <CardContent className="p-6">
           <div className="flex justify-between items-center text-xl font-bold">
-            <span>Grand Total</span>
+            <span>GRAND TOTAL</span>
             <span>INR {details.total_amount?.toFixed(2)}</span>
           </div>
         </CardContent>

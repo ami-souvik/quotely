@@ -17,7 +17,9 @@ export function Sidebar() {
   ];
 
   const adminNavItems = [
+    { href: '/admin/products', icon: Package, label: 'Products' },
     { href: '/quotes/master-items', icon: Package, label: 'Master Items' },
+    { href: '/admin/templates', icon: FileText, label: 'PDF Templates' },
   ];
 
   return (
