@@ -3,31 +3,27 @@
 ## AWS Cognito & Authentication
 
 ### "Unauthorized" Error on API
-*   **Cause**: The backend could not validate the token.
-*   **Fix 1 (Audience)**: Ensure `COGNITO_APP_CLIENT_ID` in backend env matches the token's `aud` claim.
-*   **Fix 2 (Region)**: Ensure `COGNITO_AWS_REGION` matches the token's `iss` region.
-*   **Fix 3 (Attributes)**: Ensure the user in Cognito has `custom:org_name` populated. If missing, the backend might create a user without an organization.
+*   **Cause**: The API route could not validate the JWT token.
+*   **Fix 1 (Client ID)**: Ensure `NEXT_PUBLIC_USER_POOL_CLIENT_ID` in `.env.local` matches the token's audience.
+*   **Fix 2 (Attributes)**: The system expects `custom:org_name` or `custom:org_id` in the Cognito token to determine multi-tenancy. If missing, make sure to add these to the User Pool attributes and ensure they are writable by your App Client.
 
-### "InvalidAudienceError"
-*   **Cause**: Mismatch between token's `aud` and backend `COGNITO_AUDIENCE`.
-*   **Fix**: Update `COGNITO_AUDIENCE` or `COGNITO_APP_CLIENT_ID` in `server/.env`.
+### Environment Variable Issues
+*   **Missing Variables in Client**: If you access a variable starting with `NEXT_PUBLIC_` and it's undefined, restart the `npm run dev` server.
+*   **Secret Keys in Browser**: Ensure AWS Secret Keys do **NOT** have the `NEXT_PUBLIC_` prefix; they should only be accessible in `src/lib/services.ts` (which runs on the server).
 
-## Docker & Deployment
+## PDF Generation
 
-### "Invalid Elastic Container Registry Image URI" in Lambda
-*   **Cause**: You are trying to use a **Public ECR** URI or a URI from a different region.
-*   **Fix**: Use a **Private ECR** repository in the **same region** as your Lambda function.
+### Puppeteer Launch Failures
+*   **Environment**: Headless Chrome requires specific system libraries (libnss, libatk, etc.).
+*   **Local Fix**: Ensure Puppeteer downloaded Chromium (`npm install`).
+*   **Serverless Fix**: In AWS Lambda or Vercel, you must use a lightweight chromium provider like `@sparticuz/chromium`.
 
-### Large Docker Image Size
-*   **Cause**: Build tools (`g++`, `build-essential`) left in the image layer.
-*   **Fix**: Use a single `RUN` instruction to install build deps, pip install, and remove build deps. (Already optimized in `server/Dockerfile`).
+## DynamoDB
 
-### Lambda Timeout (Init Duration)
-*   **Cause 1**: Port mismatch. Lambda Adapter expects port 8080. Ensure `Gunicorn` binds to `0.0.0.0:8080`.
-*   **Cause 2**: Low memory. 128MB is too low for Django/WeasyPrint. Use 512MB+.
+### "UnrecognizedClientException"
+*   **Cause**: Invalid AWS Credentials for the region or expired keys.
+*   **Fix**: Check your `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` in `.env.local` and ensure they have permissions for `DynamoDB:GetItem`, `Query`, etc.
 
-## S3 & PDF
-
-### "Failed to upload PDF to S3"
-*   **Cause**: Bucket has "Bucket owner enforced" (ACLs disabled), but code tried to set `ACL='private'`.
-*   **Fix**: Remove `ACL` parameter from `s3_client.put_object` call. (Already fixed in `services.py`).
+### Missing GSI Results
+*   **Cause**: The GSI keys (`GSI1PK`, `GSI1SK`) were not populated on the item.
+*   **Fix**: Check `src/lib/services.ts` to ensure that when a product is created with a `family_id`, the GSI keys are explicitly set.

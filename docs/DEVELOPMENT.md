@@ -1,101 +1,46 @@
 # Local Development Guide
 
 ## Prerequisites
-*   Docker & Docker Compose.
-*   Node.js 18+.
-*   Python 3.11+.
+*   Node.js 20+
+*   AWS Credentials (configured in `.env.local`)
 
 ## Setup
 
-1.  **Clone Repository**.
-2.  **Environment Variables**:
-    *   Create `server/.env` with your AWS credentials (see `DEPLOYMENT.md` for keys).
-    *   Set `ALLOWED_HOSTS=localhost` in `server/.env`.
-3.  **Start Services**:
+1.  **Navigate to Client Directory**:
     ```bash
-    docker compose up --build
-    ```
-    This starts:
-    *   Backend on `http://localhost:8000`.
-    *   Frontend on `http://localhost:3000`.
-
-## Frontend Development
-*   Navigate to `client/`.
-*   Run `npm install`.
-*   Run `npm run dev` to start locally (if not using Docker).
-
-## Backend Development
-*   Navigate to `server/`.
-*   Create venv: `python -m venv venv`.
-*   Install deps: `pip install -r requirements.txt`.
-*   Run: `python manage.py runserver` (requires local AWS creds setup).
-
-## Cognito Setup for Localhost
-1.  Add `http://localhost:3000` to **Allowed callback URLs** in your Cognito App Client settings.
-2.  Add `http://localhost:3000` to **Allowed sign-out URLs**.
-
-## Managing Cognito Users via CLI
-
-You can manage AWS Cognito users directly from the Django backend container using the custom `cognito_users` command.
-
-**Usage:**
-Run inside the server container (e.g., `docker exec -it quotely-server-1 bash`):
-
-*   **List Users**:
-    ```bash
-    python manage.py cognito_users list
-    ```
-*   **Get User Details**:
-    ```bash
-    python manage.py cognito_users get <username>
-    ```
-*   **Create User**:
-    ```bash
-    python manage.py cognito_users create <username> <email> --org-name "Organization Name"
-    ```
-    (Note: This creates the user in Cognito AND triggers the local DB sync/creation when they first log in, or you can invoke the manager manually if needed).
-*   **Delete User**:
-    ```bash
-    python manage.py cognito_users delete <username>
-    ```
-* In order to manage local DB include flag: [--local]
-
-## Automated Deployment Hook
-
-You can set up a git hook to automatically build and deploy the backend to AWS Lambda whenever you push to the repository.
-
-1.  **Ensure `deploy-hook.sh` is executable**:
-    ```bash
-    chmod +x deploy-hook.sh
+    cd client
     ```
 
-2.  **Copy to Git Hooks**:
-    To run this script before every push (recommended):
+2.  **Install Dependencies**:
     ```bash
-    cp deploy-hook.sh .git/hooks/pre-push
-    ```
-    *Now, whenever you run `git push`, the script will build the Docker image, push it to ECR, and update the Lambda function. If the deployment fails, the push will be aborted.*
-
-    Alternatively, if you want it to run after every local commit (not recommended due to slowness):
-    ```bash
-    cp deploy-hook.sh .git/hooks/post-commit
+    npm install
     ```
 
-## CloudFormation Linting (cfn-lint)
+3.  **Environment Variables**:
+    Create a `client/.env.local` file with the following keys:
+    ```env
+    # AWS Credentials
+    AWS_ACCESS_KEY_ID=your_access_key
+    AWS_SECRET_ACCESS_KEY=your_secret_key
+    AWS_REGION=ap-south-1
 
-To ensure CloudFormation templates are valid and follow best practices, `cfn-lint` can be used.
+    # DynamoDB & S3
+    DYNAMO_TABLE_NAME=QuotelyCore
+    AWS_S3_BUCKET_NAME=quotely-quotes
 
-1.  **Install `cfn-lint`**:
-    ```bash
-    pip install cfn-lint
+    # Cognito
+    NEXT_PUBLIC_USER_POOL_ID=ap-south-1_xxxxxx
+    NEXT_PUBLIC_USER_POOL_CLIENT_ID=5dqss2ei776k8n7jb9e54le8q4
     ```
 
-2.  **Set up Pre-commit Hook**:
-    To automatically lint templates before each commit:
+4.  **Start Development Server**:
     ```bash
-    cp infrastructure/lint_cfn.sh .git/hooks/pre-commit
-    chmod +x .git/hooks/pre-commit
+    npm run dev
     ```
-    *Now, any changes to `.yaml` files in the `infrastructure/` directory will be linted before the commit is finalized. If `cfn-lint` finds errors, the commit will be blocked, helping to prevent deployment failures.*
+    The app will be available at `http://localhost:3000`.
 
+## Architecture Note
+The application uses Next.js API Routes for all backend logic. There is no separate backend server. The backend code is located in `src/app/api/` and shared logic is in `src/lib/services.ts`.
 
+## PDF Generation
+PDF generation uses Puppeteer. Ensure your development environment can run Headless Chrome (most modern OSs support this natively via `npm install puppeteer`).
