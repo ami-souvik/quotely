@@ -7,7 +7,7 @@ import { getProductFamilies } from '@/lib/api/product-families';
 import { ProductFamilySerializer, Product } from '@/lib/types';
 import { Plus, Package, FolderOpen, Settings, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardIcon, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getProductsByFamily } from '@/lib/api/products';
@@ -85,7 +85,7 @@ const DashboardPage: React.FC = () => {
         try {
           setLoading(true);
           const [quotesRes, familiesRes] = await Promise.all([
-            api.get('/quotes/mine/'),
+            api.get('/quotes/all/'),
             // Only fetch families if admin, though preview is nice for everyone? 
             // The prompt implies dashboard preview of families.
             user.role === 'ADMIN' ? getProductFamilies() : Promise.resolve([])
@@ -144,7 +144,7 @@ const DashboardPage: React.FC = () => {
 
       {/* My Quotes Section */}
       <section className="mb-8">
-        <h3 className="text-xl font-semibold mb-4">My Quotes</h3>
+        <h3 className="text-xl font-semibold mb-4">All Quotes</h3>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {loading && quotes.length === 0 ? (
             <p className="text-muted-foreground">Loading quotes...</p>
@@ -173,7 +173,7 @@ const DashboardPage: React.FC = () => {
             ))
           ) : (
             <div className="col-span-full py-8 border rounded-lg border-dashed text-center">
-              <p className="text-muted-foreground">You have not created any quotes yet.</p>
+              <p className="text-muted-foreground">No quotes found for this organization.</p>
             </div>
           )}
         </div>

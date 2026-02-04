@@ -29,7 +29,7 @@ interface CustomerDetailPageProps {
 const CustomerDetailPage: React.FC<CustomerDetailPageProps> = () => {
     const router = useRouter();
     const params = useParams();
-    const customerId = params.id;
+    const customerId = params.id as string;
     const [customer, setCustomer] = useState<Customer | null>(null);
     const [quotes, setQuotes] = useState<Quote[]>([]); // Use Quote type here
     const [loading, setLoading] = useState(true);
@@ -40,6 +40,7 @@ const CustomerDetailPage: React.FC<CustomerDetailPageProps> = () => {
     const [editName, setEditName] = useState('');
     const [editEmail, setEditEmail] = useState('');
     const [editPhone, setEditPhone] = useState('');
+    const [editAddress, setEditAddress] = useState('');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -50,6 +51,7 @@ const CustomerDetailPage: React.FC<CustomerDetailPageProps> = () => {
                 setEditName(customerData.name);
                 setEditEmail(customerData.email || '');
                 setEditPhone(customerData.phone || '');
+                setEditAddress(customerData.address || '');
 
                 // Fetch all quotes and filter (Ideally backend should filter)
                 // Since we didn't add a specific endpoint for customer quotes yet, we can't efficiently query by customer ID if we rely on GSI updates that might not be there.
@@ -93,6 +95,7 @@ const CustomerDetailPage: React.FC<CustomerDetailPageProps> = () => {
                 name: editName,
                 email: editEmail,
                 phone: editPhone,
+                address: editAddress,
             });
             setCustomer(updated);
             alert("Customer updated successfully.");
@@ -140,6 +143,10 @@ const CustomerDetailPage: React.FC<CustomerDetailPageProps> = () => {
                                 <Phone className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input id="c-phone" className="pl-8" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
                             </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="c-address">Address</Label>
+                            <Input id="c-address" value={editAddress} onChange={(e) => setEditAddress(e.target.value)} />
                         </div>
 
                         <div className="pt-4">

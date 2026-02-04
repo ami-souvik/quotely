@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getQuotes, deleteQuote, Quote } from '@/lib/api/quotes';
-import { Plus, Search, Eye, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Eye, Edit, Trash2, Download, FileText, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -15,6 +14,17 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { getQuotes, deleteQuote, Quote, generatePdf, getPresignedUrl, getPDFTemplates, PDFTemplate } from '@/lib/api/quotes';
 import {
   Card,
   CardContent,
@@ -30,6 +40,14 @@ const AllQuotesPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [pdfMode, setPdfMode] = useState<'preview' | 'download'>('preview');
+
+  // PDF Template State
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [pdfTemplates, setPdfTemplates] = useState<PDFTemplate[]>([]);
+  const [selectedPdfTemplate, setSelectedPdfTemplate] = useState<string>('');
+  const [activeQuoteId, setActiveQuoteId] = useState<string | null>(null);
 
   const fetchQuotes = async () => {
     try {
@@ -57,6 +75,46 @@ const AllQuotesPage: React.FC = () => {
     );
     setFilteredQuotes(filtered);
   }, [searchQuery, quotes]);
+
+  const handlePdfAction = async (sk: string, mode: 'preview' | 'download') => {
+    const quoteId = sk.split('#')[1];
+    setProcessingId(quoteId);
+    setPdfMode(mode);
+    try {
+      const templates = await getPDFTemplates().catch(() => []);
+      if (templates.length > 0) {
+        setPdfTemplates(templates);
+        setSelectedPdfTemplate(templates[0].id);
+        setActiveQuoteId(quoteId);
+        setShowTemplateDialog(true);
+        setProcessingId(null);
+        return;
+      }
+      await generatePdf(quoteId);
+      const url = await getPresignedUrl(quoteId, mode === 'download');
+      window.open(url, '_blank');
+      setProcessingId(null);
+    } catch (err) {
+      alert('Failed to process PDF.');
+      setProcessingId(null);
+    }
+  };
+
+  const confirmPdfAction = async () => {
+    if (!activeQuoteId) return;
+    setShowTemplateDialog(false);
+    setProcessingId(activeQuoteId);
+    try {
+      await generatePdf(activeQuoteId, selectedPdfTemplate);
+      const url = await getPresignedUrl(activeQuoteId, pdfMode === 'download');
+      window.open(url, '_blank');
+    } catch (err) {
+      alert('Failed to generate PDF with template.');
+    } finally {
+      setProcessingId(null);
+      setActiveQuoteId(null);
+    }
+  };
 
   const handleDelete = async (sk: string) => {
     if (window.confirm('Are you sure you want to delete this quote?')) {
@@ -90,109 +148,145 @@ const AllQuotesPage: React.FC = () => {
           <Plus className="mr-2 h-4 w-4" /> New Quote
         </Button>
       </div>
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search by customer or status..."
+            className="pl-8 max-w-sm"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Quotations</CardTitle>
-          <CardDescription>
-            A list of all your quotations including their status and amount.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search by customer or status..."
-                className="pl-8 max-w-sm"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="text-center py-4">Loading quotes...</div>
-          ) : error ? (
-            <div className="text-center text-red-500 py-4">{error}</div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Amount (INR)</TableHead>
-                    <TableHead className="text-right">Created At</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredQuotes.length > 0 ? (
-                    filteredQuotes.map((quote) => {
-                      const quoteId = quote.SK.split('#')[1];
-                      return (
-                        <TableRow key={quote.SK}>
-                          <TableCell className="font-medium">
-                            {quote.customer_name}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={quote.status === 'DRAFT' ? 'outline' : 'default'}>
-                              {quote.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {quote.total_amount?.toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {new Date(quote.created_at).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => router.push(`/quotes/${quoteId}`)}
-                                title="View"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => router.push(`/quotes/editor?id=${quoteId}`)}
-                                title="Edit"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDelete(quote.SK)}
-                                title="Delete"
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="h-24 text-center">
-                        No quotes found.
+      {loading ? (
+        <div className="text-center py-4">Loading quotes...</div>
+      ) : error ? (
+        <div className="text-center text-red-500 py-4">{error}</div>
+      ) : (
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Customer</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Amount (INR)</TableHead>
+                <TableHead className="text-right">Created At</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredQuotes.length > 0 ? (
+                filteredQuotes.map((quote) => {
+                  const quoteId = quote.SK.split('#')[1];
+                  return (
+                    <TableRow key={quote.SK}>
+                      <TableCell className="font-medium">
+                        {quote.customer_name}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={quote.status === 'DRAFT' ? 'outline' : 'default'}>
+                          {quote.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {quote.total_amount?.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {new Date(quote.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => router.push(`/quotes/${quoteId}`)}
+                            title="View"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handlePdfAction(quote.SK, 'preview')}
+                            disabled={processingId === quoteId}
+                            title="Preview PDF"
+                          >
+                            {processingId === quoteId && pdfMode === 'preview' ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handlePdfAction(quote.SK, 'download')}
+                            disabled={processingId === quoteId}
+                            title="Download PDF"
+                          >
+                            {processingId === quoteId && pdfMode === 'download' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => router.push(`/quotes/editor?id=${quoteId}`)}
+                            title="Edit"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(quote.SK)}
+                            title="Delete"
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  )
+                })
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-24 text-center">
+                    No quotes found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+      <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Select PDF Template</DialogTitle>
+            <DialogDescription>
+              Choose a template format for the quotation PDF.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <RadioGroup value={selectedPdfTemplate} onValueChange={setSelectedPdfTemplate}>
+              {pdfTemplates.map(tmpl => (
+                <div key={tmpl.id} className="flex items-center space-x-2 mb-2 p-2 rounded hover:bg-slate-50 border border-transparent hover:border-slate-100">
+                  <RadioGroupItem value={tmpl.id} id={`tmpl-${tmpl.id}`} />
+                  <Label htmlFor={`tmpl-${tmpl.id}`} className="flex-1 cursor-pointer flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    {tmpl.name}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTemplateDialog(false)}>Cancel</Button>
+            <Button onClick={confirmPdfAction}>
+              {pdfMode === 'download' ? 'Generate & Download' : 'Generate & Preview'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

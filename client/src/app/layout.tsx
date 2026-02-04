@@ -20,6 +20,7 @@ export const metadata: Metadata = {
 };
 
 import CognitoAuthProvider from "@/components/CognitoAuthProvider";
+import { Toaster } from "sonner";
 
 export default function RootLayout({
   children,
@@ -32,6 +33,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <CognitoAuthProvider>{children}</CognitoAuthProvider>
+        <Toaster position="top-right" richColors />
       </body>
     </html>
   );

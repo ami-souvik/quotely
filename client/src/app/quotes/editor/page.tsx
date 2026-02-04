@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import api, { useAuthStore } from '@/lib/api/client';
 import { QuoteFamily, QuoteItem, ProductFamilySerializer, ProductColumn, Customer } from '@/lib/types';
 import { getProductsByFamily, getProductSettings } from '@/lib/api/products';
-import { getQuote, updateQuote } from '@/lib/api/quotes';
+import { getQuote, updateQuote, createQuote } from '@/lib/api/quotes';
 import { getProductFamilies } from '@/lib/api/product-families';
 import { getCustomers } from '@/lib/api/customers';
 import { CirclePlus, Loader2, Trash2, Plus, X, Search, User } from 'lucide-react';
@@ -26,6 +26,23 @@ const QuoteEditorContent: React.FC = () => {
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [customerEmail, setCustomerEmail] = useState<string | null>(null);
   const [customerPhone, setCustomerPhone] = useState<string | null>(null);
+  const [customerAddress, setCustomerAddress] = useState<string | null>(null);
+  const [displayId, setDisplayId] = useState<string>('');
+
+  const generateId = (name: string) => {
+    const parts = name.trim().split(/\s+/);
+    const firstName = parts[0] || '';
+    const lastName = parts.slice(1).join('') || '';
+
+    const firstLetter = firstName.charAt(0).toUpperCase();
+    const last4Letters = lastName.substring(0, 4).toUpperCase();
+
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const timestamp = `${pad(now.getDate())}${pad(now.getMonth() + 1)}${now.getFullYear()}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+
+    return `${firstLetter}${last4Letters}#${timestamp}`;
+  };
 
   const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -52,6 +69,13 @@ const QuoteEditorContent: React.FC = () => {
     setCustomerId(null);
     setCustomerEmail(null);
     setCustomerPhone(null);
+    setCustomerAddress(null);
+
+    if (val.trim()) {
+      setDisplayId(generateId(val));
+    } else {
+      setDisplayId('');
+    }
   };
 
   const selectCustomer = (customer: Customer) => {
@@ -59,7 +83,9 @@ const QuoteEditorContent: React.FC = () => {
     setCustomerId(customer.id);
     setCustomerEmail(customer.email || null);
     setCustomerPhone(customer.phone || null);
+    setCustomerAddress(customer.address || null);
     setShowSuggestions(false);
+    setDisplayId(generateId(customer.name));
   };
 
   // Custom Fields State
@@ -102,6 +128,8 @@ const QuoteEditorContent: React.FC = () => {
           setCustomerId(details.customer_id || null);
           setCustomerEmail(details.customer_email || null);
           setCustomerPhone(details.customer_phone || null);
+          setCustomerAddress(details.customer_address || null);
+          setDisplayId(details.display_id || '');
           setQuoteFamilies(details.families || []);
         } else if (selectedProductFamilies.length > 0) {
           // Creating new quote from selection (passed from previous page, though we are merging functionality)
@@ -290,6 +318,11 @@ const QuoteEditorContent: React.FC = () => {
 
     const quoteData = {
       customer_name: customerName || 'Untitled Customer',
+      customer_id: customerId,
+      customer_email: customerEmail,
+      customer_phone: customerPhone,
+      customer_address: customerAddress,
+      display_id: displayId,
       families: quoteFamilies.map(family => ({
         family_id: family.family_id,
         family_name: family.family_name,
@@ -307,8 +340,8 @@ const QuoteEditorContent: React.FC = () => {
         await updateQuote(quoteId, quoteData);
         alert('Quote updated successfully!');
       } else {
-        const response = await api.post('/quotes/create/', quoteData);
-        alert(`Quote saved successfully! Quote ID: ${response.data.quote_id}`);
+        const response = await createQuote(quoteData);
+        alert(`Quote saved successfully! Quote ID: ${response.id}`);
       }
       router.push('/');
     } catch (err: any) {
@@ -411,13 +444,30 @@ const QuoteEditorContent: React.FC = () => {
               </div>
             )}
 
-            {(customerEmail || customerPhone) && (
-              <div className="mt-2 text-xs text-gray-500 flex gap-4 bg-gray-50 p-2 rounded border border-gray-100">
+            {(customerEmail || customerPhone || customerAddress) && (
+              <div className="mt-2 text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1 bg-gray-50 p-2 rounded border border-gray-100">
                 {customerEmail && <span className="font-medium">📧 {customerEmail}</span>}
                 {customerPhone && <span className="font-medium">📱 {customerPhone}</span>}
+                {customerAddress && <span className="font-medium font-sans">🏠 {customerAddress}</span>}
               </div>
             )}
           </div>
+        </div>
+
+        <div className="mb-6 bg-white p-4 rounded-lg border shadow-sm">
+          <label htmlFor="displayId" className="block text-gray-700 text-sm font-bold mb-2">
+            Quotation ID:
+          </label>
+          <input
+            disabled
+            type="text"
+            id="displayId"
+            className="w-full border rounded shadow-sm py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={displayId}
+            onChange={(e) => setDisplayId(e.target.value)}
+            placeholder="Auto-generated based on customer name..."
+          />
+          <p className="text-[10px] text-muted-foreground mt-1">Format: FirstLetter+First4LettersOfLastname#DD-MM-YYYY-hh-mm-ss</p>
         </div>
 
         {quoteFamilies.length === 0 && (

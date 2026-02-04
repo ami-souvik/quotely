@@ -1,0 +1,66 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { authenticate } from '@/lib/auth-server';
+import { services } from '@/lib/services';
+import { generateQuotePdfHtml } from '@/lib/pdf-generator';
+import { generatePdfBuffer } from '@/lib/pdf';
+
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+    const user = await authenticate(req);
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { id: quoteId } = await params;
+    // const orgId = user.org_id; // Using user's org. If Admin viewing other org, logic differs.
+    // Assuming user can only generate for their org.
+    
+    // 1. Get Quote
+    const quote = await services.getQuotation(user.org_id, quoteId);
+    if (!quote) return NextResponse.json({ error: 'Quote not found' }, { status: 404 });
+
+    // 2. Get Template settings
+    let pdfSettings: any = null;
+    try {
+        const body = await req.json();
+        const templateId = body.template_id;
+        if (templateId) {
+            const template = await services.getPDFTemplate(user.org_id, templateId);
+            if (template) {
+                pdfSettings = { columns: template.columns };
+            }
+        }
+    } catch (e) {
+        // Body might be empty
+    }
+
+    if (!pdfSettings) {
+        // Fallback to legacy/default settings
+        const columns = await services.getTemplateSettings(user.org_id);
+        pdfSettings = { columns };
+    }
+
+    // 3. Get Organization Settings
+    const orgSettings = await services.getOrganization(user.org_id);
+    
+    // 4. Generate HTML
+    const quoteData = { ...quote, ...(quote.snapshot || {}) };
+    const html = generateQuotePdfHtml(quoteData, orgSettings, pdfSettings);
+
+    // 4. Generate PDF
+    try {
+        const pdfBuffer = await generatePdfBuffer(html);
+        
+        // 5. Upload to S3
+        const s3Url = await services.uploadPDFToS3(pdfBuffer, user.org_id, quoteId);
+        
+        if (s3Url) {
+            // 6. Update Quote
+            await services.updateQuotationS3Link(user.org_id, quoteId, s3Url);
+            return NextResponse.json({ success: true, url: s3Url });
+        } else {
+            return NextResponse.json({ error: 'Failed to upload PDF' }, { status: 500 });
+        }
+
+    } catch (e) {
+        console.error("PDF Gen Error:", e);
+        return NextResponse.json({ error: 'Failed to generate PDF' }, { status: 500 });
+    }
+}

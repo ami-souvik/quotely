@@ -39,6 +39,7 @@ const CustomersPage: React.FC = () => {
     const [newCustomerName, setNewCustomerName] = useState('');
     const [newCustomerEmail, setNewCustomerEmail] = useState('');
     const [newCustomerPhone, setNewCustomerPhone] = useState('');
+    const [newCustomerAddress, setNewCustomerAddress] = useState('');
     const [creating, setCreating] = useState(false);
 
     const fetchCustomers = async () => {
@@ -79,12 +80,14 @@ const CustomersPage: React.FC = () => {
                 name: newCustomerName,
                 email: newCustomerEmail,
                 phone: newCustomerPhone,
+                address: newCustomerAddress,
             });
             setCustomers([...customers, newCustomer]);
             setIsCreateOpen(false);
             setNewCustomerName('');
             setNewCustomerEmail('');
             setNewCustomerPhone('');
+            setNewCustomerAddress('');
         } catch (e: any) {
             alert("Failed to create customer: " + e.message);
         } finally {
@@ -117,104 +120,96 @@ const CustomersPage: React.FC = () => {
                     <Plus className="mr-2 h-4 w-4" /> Add Customer
                 </Button>
             </div>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>All Customers</CardTitle>
-                    <CardDescription>
-                        View and search for customers. Click view to see their quotes or edit details.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="mb-4">
-                        <div className="relative">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                type="search"
-                                placeholder="Search customers..."
-                                className="pl-8 max-w-sm"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    {loading ? (
-                        <div className="text-center py-4">Loading customers...</div>
-                    ) : error ? (
-                        <div className="text-center text-red-500 py-4">{error}</div>
-                    ) : (
-                        <div className="rounded-md border">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Name</TableHead>
-                                        <TableHead>Email</TableHead>
-                                        <TableHead>Phone</TableHead>
-                                        <TableHead className="text-right">Created At</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
+            <div className="mb-4">
+                <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        type="search"
+                        placeholder="Search customers..."
+                        className="pl-8 max-w-sm"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+            </div>
+            {loading ? (
+                <div className="text-center py-4">Loading customers...</div>
+            ) : error ? (
+                <div className="text-center text-red-500 py-4">{error}</div>
+            ) : (
+                <div className="rounded-md border">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Email</TableHead>
+                                <TableHead>Phone</TableHead>
+                                <TableHead>Client ID</TableHead>
+                                <TableHead className="text-right">Created At</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredCustomers.length > 0 ? (
+                                filteredCustomers.map((customer) => (
+                                    <TableRow key={customer.id}>
+                                        <TableCell className="font-medium">
+                                            {customer.name}
+                                        </TableCell>
+                                        <TableCell>
+                                            {customer.email && (
+                                                <div className='flex items-center gap-2 text-muted-foreground'>
+                                                    <Mail className='h-3 w-3' /> {customer.email}
+                                                </div>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            {customer.phone && (
+                                                <div className='flex items-center gap-2 text-muted-foreground'>
+                                                    <Phone className='h-3 w-3' /> {customer.phone}
+                                                </div>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            <code className='text-xs bg-muted px-1.5 py-0.5 rounded'>{customer.customer_identifier}</code>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            {new Date(customer.created_at).toLocaleDateString()}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex justify-end gap-2">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => router.push(`/quotes/customers/${customer.id}`)}
+                                                    title="View"
+                                                >
+                                                    <Eye className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleDelete(customer.id)}
+                                                    title="Delete"
+                                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </TableCell>
                                     </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredCustomers.length > 0 ? (
-                                        filteredCustomers.map((customer) => (
-                                            <TableRow key={customer.id}>
-                                                <TableCell className="font-medium">
-                                                    {customer.name}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {customer.email && (
-                                                        <div className='flex items-center gap-2 text-muted-foreground'>
-                                                            <Mail className='h-3 w-3' /> {customer.email}
-                                                        </div>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {customer.phone && (
-                                                        <div className='flex items-center gap-2 text-muted-foreground'>
-                                                            <Phone className='h-3 w-3' /> {customer.phone}
-                                                        </div>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    {new Date(customer.created_at).toLocaleDateString()}
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <div className="flex justify-end gap-2">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => router.push(`/quotes/customers/${customer.id}`)}
-                                                            title="View"
-                                                        >
-                                                            <Eye className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => handleDelete(customer.id)}
-                                                            title="Delete"
-                                                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : (
-                                        <TableRow>
-                                            <TableCell colSpan={5} className="h-24 text-center">
-                                                No customers found.
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="h-24 text-center">
+                                        No customers found.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+            )}
 
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                 <DialogContent>
@@ -258,7 +253,19 @@ const CustomersPage: React.FC = () => {
                                 value={newCustomerPhone}
                                 onChange={(e) => setNewCustomerPhone(e.target.value)}
                                 className="col-span-3"
-                                placeholder="+1 234..."
+                                placeholder="+91 987..."
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="address" className="text-right">
+                                Address
+                            </Label>
+                            <Input
+                                id="address"
+                                value={newCustomerAddress}
+                                onChange={(e) => setNewCustomerAddress(e.target.value)}
+                                className="col-span-3"
+                                placeholder="Full address"
                             />
                         </div>
                     </div>

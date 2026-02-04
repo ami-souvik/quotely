@@ -3,7 +3,12 @@ import { Quote } from '@/lib/types';
 export type { Quote };
 
 export const getQuotes = async (): Promise<Quote[]> => {
-  const response = await api.get('/quotes/mine/');
+  const response = await api.get('/quotes/all/');
+  return response.data;
+};
+
+export const createQuote = async (data: any): Promise<{ id: string }> => {
+  const response = await api.post('/quotes/', data);
   return response.data;
 };
 
@@ -30,8 +35,8 @@ export const generatePdf = async (id: string, templateId?: string): Promise<void
   await api.post(`/quotes/${id}/generate-pdf/`, { template_id: templateId });
 };
 
-export const getPresignedUrl = async (id: string): Promise<string> => {
-  const response = await api.get(`/quotes/${id}/presigned-url/`);
+export const getPresignedUrl = async (id: string, download = false): Promise<string> => {
+  const response = await api.get(`/quotes/${id}/presigned-url/${download ? '?download=true' : ''}`);
   return response.data.presigned_url;
 };
 

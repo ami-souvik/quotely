@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Loader2, Edit, Download, FileText } from 'lucide-react';
+import { ArrowLeft, Loader2, Edit, Download, FileText, Eye } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Dialog,
@@ -29,6 +29,7 @@ const QuoteDetailPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [columns, setColumns] = useState<any[]>([]);
+  const [pdfMode, setPdfMode] = useState<'preview' | 'download'>('preview');
 
   // PDF Template State
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
@@ -66,8 +67,9 @@ const QuoteDetailPage: React.FC = () => {
     }
   }, [id]);
 
-  const handleDownloadPdf = async () => {
+  const handlePdfAction = async (mode: 'preview' | 'download') => {
     setDownloading(true);
+    setPdfMode(mode);
     try {
       // 1. Fetch available templates
       const templates = await getPDFTemplates().catch(e => {
@@ -87,33 +89,33 @@ const QuoteDetailPage: React.FC = () => {
 
       // 3. Fallback: Default/Legacy generation
       await generatePdf(id);
-      const url = await getPresignedUrl(id);
+      const url = await getPresignedUrl(id, mode === 'download');
       window.open(url, '_blank');
       setDownloading(false);
     } catch (err: any) {
-      console.error("Download failed", err);
+      console.error("PDF action failed", err);
       // Fallback: maybe it was already there?
       try {
         await generatePdf(id);
-        const url = await getPresignedUrl(id);
+        const url = await getPresignedUrl(id, mode === 'download');
         window.open(url, '_blank');
         setDownloading(false);
       } catch (e) {
-        alert('Failed to generate and download PDF.');
+        alert('Failed to generate PDF.');
         setDownloading(false);
       }
     }
   };
 
-  const confirmDownloadPdf = async () => {
+  const confirmPdfAction = async () => {
     setShowTemplateDialog(false);
     setDownloading(true);
     try {
       await generatePdf(id, selectedPdfTemplate);
-      const url = await getPresignedUrl(id);
+      const url = await getPresignedUrl(id, pdfMode === 'download');
       window.open(url, '_blank');
     } catch (err: any) {
-      console.error("Template PDF Download failed", err);
+      console.error("Template PDF action failed", err);
       alert('Failed to generate PDF with template.');
     } finally {
       setDownloading(false);
@@ -140,14 +142,17 @@ const QuoteDetailPage: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-4">
-      {/* ... Header buttons ... */}
-      <div className="flex justify-between items-center mb-4">
-        <Button variant="ghost" onClick={() => router.back()}>
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">
+        <Button variant="ghost" className="w-fit" onClick={() => router.back()}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
         </Button>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleDownloadPdf} disabled={downloading}>
-            {downloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => handlePdfAction('preview')} disabled={downloading}>
+            {downloading && pdfMode === 'preview' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Eye className="mr-2 h-4 w-4" />}
+            Preview PDF
+          </Button>
+          <Button variant="outline" onClick={() => handlePdfAction('download')} disabled={downloading}>
+            {downloading && pdfMode === 'download' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
             Download PDF
           </Button>
           <Button onClick={() => router.push(`/quotes/editor?id=${id}`)}>
@@ -165,7 +170,7 @@ const QuoteDetailPage: React.FC = () => {
           <div className="grid grid-cols-[2fr_1fr] gap-4 text-sm mt-4">
             <div>
               <p className="text-muted-foreground">Quote ID</p>
-              <p className="font-medium">{id}</p>
+              <p className="font-medium">{details.display_id || id}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Date</p>
@@ -245,9 +250,9 @@ const QuoteDetailPage: React.FC = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowTemplateDialog(false)}>Cancel</Button>
-            <Button onClick={confirmDownloadPdf} disabled={downloading}>
-              {downloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-              Generate & Download
+            <Button onClick={confirmPdfAction} disabled={downloading}>
+              {downloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (pdfMode === 'download' ? <Download className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />)}
+              {pdfMode === 'download' ? 'Generate & Download' : 'Generate & Preview'}
             </Button>
           </DialogFooter>
         </DialogContent>
