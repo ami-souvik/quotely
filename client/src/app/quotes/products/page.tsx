@@ -278,7 +278,7 @@ const ProductsPage: React.FC = () => {
     if (error) return <div className="p-4 text-red-500">{error}</div>;
 
     return (
-        <div className="p-8">
+        <div>
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold">Product Management</h1>
             </div>

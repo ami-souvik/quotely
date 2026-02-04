@@ -2,13 +2,23 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getQuote, generatePdf, getPresignedUrl, Quote, getTemplateSettings } from '@/lib/api/quotes';
+import { getQuote, generatePdf, getPresignedUrl, Quote, getTemplateSettings, getPDFTemplates, PDFTemplate } from '@/lib/api/quotes';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Loader2, Edit, Download } from 'lucide-react';
+import { ArrowLeft, Loader2, Edit, Download, FileText } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const QuoteDetailPage: React.FC = () => {
   const params = useParams();
@@ -19,6 +29,11 @@ const QuoteDetailPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [columns, setColumns] = useState<any[]>([]);
+
+  // PDF Template State
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [pdfTemplates, setPdfTemplates] = useState<PDFTemplate[]>([]);
+  const [selectedPdfTemplate, setSelectedPdfTemplate] = useState<string>('');
 
   useEffect(() => {
     if (id) {
@@ -54,33 +69,52 @@ const QuoteDetailPage: React.FC = () => {
   const handleDownloadPdf = async () => {
     setDownloading(true);
     try {
-      // Always generate fresh PDF to ensure it matches current data
-      // Or we can try to get existing one first.
-      // Given the requirement "download the quotation", usually implies latest.
-      // But generating every time is slower.
-      // Let's try to get presigned URL first.
-      // If it fails (404), then generate.
-      // Actually, if the user edited the quote, the old PDF is stale.
-      // We should probably rely on backend to invalidate PDF on edit.
-      // (In `update_quotation` in services.py, we didn't clear s3_pdf_link, so old link remains).
-      // Ideally update_quotation should clear s3_pdf_link.
-      // For now, I will force generation if it fails, but if it succeeds, it might be old.
-      // To be safe, let's just generate it fresh if the user asks for download?
-      // Or I can just check if I can download.
+      // 1. Fetch available templates
+      const templates = await getPDFTemplates().catch(e => {
+        console.error("Failed to fetch templates", e);
+        return [];
+      });
 
-      // Let's try generating first to be sure.
+      // 2. If existing templates, ask user
+      if (templates.length > 0) {
+        setPdfTemplates(templates);
+        // Default to first one or previously selected?
+        setSelectedPdfTemplate(templates[0].id);
+        setShowTemplateDialog(true);
+        setDownloading(false); // Stop spinner, wait for user input
+        return;
+      }
+
+      // 3. Fallback: Default/Legacy generation
       await generatePdf(id);
       const url = await getPresignedUrl(id);
       window.open(url, '_blank');
+      setDownloading(false);
     } catch (err: any) {
       console.error("Download failed", err);
       // Fallback: maybe it was already there?
       try {
+        await generatePdf(id);
         const url = await getPresignedUrl(id);
         window.open(url, '_blank');
+        setDownloading(false);
       } catch (e) {
         alert('Failed to generate and download PDF.');
+        setDownloading(false);
       }
+    }
+  };
+
+  const confirmDownloadPdf = async () => {
+    setShowTemplateDialog(false);
+    setDownloading(true);
+    try {
+      await generatePdf(id, selectedPdfTemplate);
+      const url = await getPresignedUrl(id);
+      window.open(url, '_blank');
+    } catch (err: any) {
+      console.error("Template PDF Download failed", err);
+      alert('Failed to generate PDF with template.');
     } finally {
       setDownloading(false);
     }
@@ -187,6 +221,37 @@ const QuoteDetailPage: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Select PDF Template</DialogTitle>
+            <DialogDescription>
+              Choose a template format for the quotation PDF.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <RadioGroup value={selectedPdfTemplate} onValueChange={setSelectedPdfTemplate}>
+              {pdfTemplates.map(tmpl => (
+                <div key={tmpl.id} className="flex items-center space-x-2 mb-2 p-2 rounded hover:bg-slate-50 border border-transparent hover:border-slate-100">
+                  <RadioGroupItem value={tmpl.id} id={`tmpl-${tmpl.id}`} />
+                  <Label htmlFor={`tmpl-${tmpl.id}`} className="flex-1 cursor-pointer flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    {tmpl.name}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTemplateDialog(false)}>Cancel</Button>
+            <Button onClick={confirmDownloadPdf} disabled={downloading}>
+              {downloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+              Generate & Download
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

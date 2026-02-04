@@ -51,4 +51,30 @@ class TemplateSettingsSerializer(serializers.Serializer):
     columns = serializers.ListField(
         child=serializers.DictField()
     )
-    
+
+class CustomerSerializer(serializers.Serializer):
+    id = serializers.SerializerMethodField()
+    name = serializers.CharField(max_length=255)
+    email = serializers.EmailField(required=False, allow_blank=True, allow_null=True)
+    phone = serializers.CharField(max_length=50, required=False, allow_blank=True, allow_null=True)
+    created_at = serializers.CharField(read_only=True)
+
+    def get_id(self, obj):
+        sk = obj.get('SK', '')
+        try:
+            return sk.split('#')[-1]
+        except IndexError:
+            return None
+
+class PDFTemplateSerializer(serializers.Serializer):
+    id = serializers.SerializerMethodField()
+    name = serializers.CharField(max_length=255)
+    columns = serializers.ListField(child=serializers.DictField())
+    created_at = serializers.CharField(read_only=True)
+
+    def get_id(self, obj):
+        sk = obj.get('SK', '')
+        try:
+            return sk.split('#')[-1]
+        except IndexError:
+            return None

@@ -51,6 +51,9 @@ class DynamoDBService:
             'status': 'DRAFT', # Default status
             'snapshot': sanitized_data,  # Full JSON snapshot of the quote
             'customer_name': data.get('customer_name', ''),
+            'customer_id': data.get('customer_id', None),
+            'customer_email': data.get('customer_email', None),
+            'customer_phone': data.get('customer_phone', None),
             'total_amount': Decimal(str(data.get('total_amount', 0.0))),
             'created_at': datetime.datetime.now().isoformat(),
             's3_pdf_link': None, # Placeholder for PDF link
@@ -83,12 +86,15 @@ class DynamoDBService:
             sanitized_data = self._convert_floats_to_decimals(data)
             
             # We update the main fields and the snapshot
-            update_expression = "SET customer_name = :cn, total_amount = :ta, snapshot = :ss, #s = :status"
+            update_expression = "SET customer_name = :cn, customer_id = :cid, customer_email = :ce, customer_phone = :cp, total_amount = :ta, snapshot = :ss, #s = :status"
             expression_attribute_names = {
                 '#s': 'status'
             }
             expression_attribute_values = {
                 ':cn': data.get('customer_name'),
+                ':cid': data.get('customer_id'),
+                ':ce': data.get('customer_email'),
+                ':cp': data.get('customer_phone'),
                 ':ta': Decimal(str(data.get('total_amount', 0.0))),
                 ':ss': sanitized_data,
                 ':status': 'DRAFT' # Reset to DRAFT on edit? Or keep current? Let's assume DRAFT for now as it's modified.
@@ -751,3 +757,171 @@ class DynamoDBService:
         except ClientError as e:
             print(f"Error updating template settings: {e.response['Error']['Message']}")
             return None
+
+    # --- PDF Template Methods ---
+    def create_pdf_template(self, org_id, data):
+        template_id = str(uuid.uuid4())
+        item = {
+            'PK': f"ORG#{org_id}",
+            'SK': f"TEMPLATE#{template_id}",
+            'type': 'PDF_TEMPLATE',
+            'name': data.get('name'),
+            'columns': data.get('columns', []),
+            'created_at': datetime.datetime.now().isoformat()
+        }
+        try:
+            self.table.put_item(Item=item)
+            return item
+        except ClientError as e:
+            print(f"Error creating PDF template: {e.response['Error']['Message']}")
+            return None
+
+    def get_pdf_templates(self, org_id):
+        try:
+            response = self.table.query(
+                KeyConditionExpression="PK = :pk AND begins_with(SK, :sk)",
+                ExpressionAttributeValues={
+                    ':pk': f"ORG#{org_id}",
+                    ':sk': "TEMPLATE#"
+                }
+            )
+            return response.get('Items', [])
+        except ClientError as e:
+            print(f"Error fetching PDF templates: {e.response['Error']['Message']}")
+            return []
+
+    def get_pdf_template(self, org_id, template_id):
+        try:
+            response = self.table.get_item(
+                Key={
+                    'PK': f"ORG#{org_id}",
+                    'SK': f"TEMPLATE#{template_id}"
+                }
+            )
+            return response.get('Item')
+        except ClientError as e:
+            print(f"Error getting PDF template: {e.response['Error']['Message']}")
+            return None
+
+    def update_pdf_template(self, org_id, template_id, data):
+        update_expression = "SET #n = :name, columns = :columns"
+        expression_attribute_names = {'#n': 'name'}
+        expression_attribute_values = {
+            ':name': data.get('name'),
+            ':columns': data.get('columns')
+        }
+        try:
+            response = self.table.update_item(
+                Key={
+                    'PK': f"ORG#{org_id}",
+                    'SK': f"TEMPLATE#{template_id}"
+                },
+                UpdateExpression=update_expression,
+                ExpressionAttributeNames=expression_attribute_names,
+                ExpressionAttributeValues=expression_attribute_values,
+                ReturnValues="UPDATED_NEW"
+            )
+            return response.get('Attributes')
+        except ClientError as e:
+            print(f"Error updating PDF template: {e.response['Error']['Message']}")
+            return None
+
+    def delete_pdf_template(self, org_id, template_id):
+        try:
+            self.table.delete_item(
+                Key={
+                    'PK': f"ORG#{org_id}",
+                    'SK': f"TEMPLATE#{template_id}"
+                }
+            )
+            return True
+        except ClientError as e:
+            print(f"Error deleting PDF template: {e.response['Error']['Message']}")
+            return False
+
+    # --- Customer Methods ---
+    def create_customer(self, org_id, data):
+        customer_id = str(uuid.uuid4())
+        item = {
+            'PK': f"ORG#{org_id}",
+            'SK': f"CUSTOMER#{customer_id}",
+            'type': 'CUSTOMER',
+            'name': data.get('name'),
+            'email': data.get('email'),
+            'phone': data.get('phone'),
+            'created_at': datetime.datetime.now().isoformat()
+        }
+        try:
+            self.table.put_item(Item=item)
+            return item
+        except ClientError as e:
+            print(f"Error creating customer: {e.response['Error']['Message']}")
+            return None
+
+    def get_customers(self, org_id):
+        try:
+            response = self.table.query(
+                KeyConditionExpression="PK = :pk AND begins_with(SK, :sk)",
+                ExpressionAttributeValues={
+                    ':pk': f"ORG#{org_id}",
+                    ':sk': "CUSTOMER#"
+                }
+            )
+            return response.get('Items', [])
+        except ClientError as e:
+            print(f"Error fetching customers: {e.response['Error']['Message']}")
+            return []
+
+    def get_customer(self, org_id, customer_id):
+        customer_id = str(customer_id).strip()
+        try:
+            response = self.table.get_item(
+                Key={
+                    'PK': f"ORG#{org_id}",
+                    'SK': f"CUSTOMER#{customer_id}"
+                }
+            )
+            return response.get('Item')
+        except ClientError as e:
+            print(f"Error getting customer: {e.response['Error']['Message']}")
+            return None
+
+    def update_customer(self, org_id, customer_id, data):
+        customer_id = str(customer_id).strip()
+        update_expression = "SET #n = :name, email = :email, phone = :phone"
+        expression_attribute_names = {'#n': 'name'}
+        expression_attribute_values = {
+            ':name': data.get('name'),
+            ':email': data.get('email'),
+            ':phone': data.get('phone')
+        }
+        try:
+            response = self.table.update_item(
+                Key={
+                    'PK': f"ORG#{org_id}",
+                    'SK': f"CUSTOMER#{customer_id}"
+                },
+                UpdateExpression=update_expression,
+                ExpressionAttributeNames=expression_attribute_names,
+                ExpressionAttributeValues=expression_attribute_values,
+                ReturnValues="UPDATED_NEW"
+            )
+            return response.get('Attributes')
+        except ClientError as e:
+            print(f"Error updating customer: {e.response['Error']['Message']}")
+            return None
+
+    def delete_customer(self, org_id, customer_id):
+        customer_id = str(customer_id).strip()
+        try:
+            self.table.delete_item(
+                Key={
+                    'PK': f"ORG#{org_id}",
+                    'SK': f"CUSTOMER#{customer_id}"
+                }
+            )
+            return True
+        except ClientError as e:
+            print(f"Error deleting customer: {e.response['Error']['Message']}")
+            return False
+

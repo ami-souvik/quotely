@@ -128,15 +128,15 @@ const DashboardPage: React.FC = () => {
 
   return (
     <>
-      <div className="flex items-center justify-between space-y-2 mb-6">
+      <div className="flex items-center justify-between space-y-2">
         <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
         <div className="flex items-center space-x-2">
           {user?.role === 'ADMIN' && (
-            <Button variant="outline" onClick={() => router.push('/admin/products')}>
+            <Button variant="outline" onClick={() => router.push('/quotes/products')}>
               <Settings className="mr-2 h-4 w-4" /> Manage Products
             </Button>
           )}
-          <Button onClick={() => router.push('/quotes/new')}>
+          <Button onClick={() => router.push('/quotes/editor')}>
             <Plus className="mr-2 h-4 w-4" /> New Quote
           </Button>
         </div>
@@ -185,61 +185,17 @@ const DashboardPage: React.FC = () => {
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-xl font-semibold">Product Overview</h3>
           </div>
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card className="col-span-2">
-              <CardHeader>
-                <CardTitle>Product Families</CardTitle>
-                <CardDescription>Preview of available product families and items.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loading && families.length === 0 ? <p className="px-4 text-muted-foreground">Loading...</p> : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Family Name</TableHead>
-                        <TableHead>Base Margin</TableHead>
-                        <TableHead className="text-right">Preview</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {families.map(family => (
-                        <React.Fragment key={family.id}>
-                          <TableRow className={expandedFamilies.has(family.id) ? "bg-muted/50" : ""}>
-                            <TableCell className="font-medium">{family.name}</TableCell>
-                            <TableCell>{(family.base_margin * 100).toFixed(0)}%</TableCell>
-                            <TableCell className="text-right">
-                              <Button variant="ghost" size="sm" onClick={() => toggleFamilyProducts(family.id)}>
-                                {expandedFamilies.has(family.id) ? "Hide" : "Show"} Products <FolderOpen className="ml-2 h-3 w-3" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                          {expandedFamilies.has(family.id) && (
-                            <TableRow>
-                              <TableCell colSpan={3} className='p-0 bg-muted/50'>
-                                <ProductListPreview family={family} />
-                              </TableCell>
-                            </TableRow>
-                          )}
-                        </React.Fragment>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-                <CardDescription>Common admin tasks</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button className="w-full justify-start" variant="outline" onClick={() => router.push('/admin/products')}>
-                  <Package className="mr-2 h-4 w-4" /> Manage Catalog
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+              <CardDescription>Common admin tasks</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 grid gap-4 grid-cols-4">
+              <Button className="w-full justify-start" variant="outline" onClick={() => router.push('/quotes/products')}>
+                <Package className="mr-2 h-4 w-4" /> Manage Catalog
+              </Button>
+            </CardContent>
+          </Card>
         </section>
       )}
     </>

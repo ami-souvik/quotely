@@ -2,7 +2,11 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from .services import DynamoDBService
-from .serializers import ProductFamilySerializer, MasterItemSerializer, ProductSerializer, ProductSettingsSerializer, TemplateSettingsSerializer
+from .serializers import (
+    ProductFamilySerializer, MasterItemSerializer, ProductSerializer, 
+    ProductSettingsSerializer, TemplateSettingsSerializer, CustomerSerializer,
+    PDFTemplateSerializer
+)
 from .permissions import IsAdmin
 from weasyprint import HTML, CSS
 from io import BytesIO
@@ -61,8 +65,18 @@ class QuotationGeneratePDFView(APIView):
             org_name = request.user.organization.name if request.user.is_authenticated and hasattr(request.user, 'organization') and request.user.organization else "Quotely Org"
             
             # Fetch template settings
-            template_columns = service.get_template_settings(org_id)
-            pdf_settings = {'columns': template_columns} if template_columns else None
+            template_id = request.data.get('template_id')
+            pdf_settings = None
+
+            if template_id:
+                template = service.get_pdf_template(org_id, template_id)
+                if template:
+                     pdf_settings = {'columns': template.get('columns', [])}
+            
+            if not pdf_settings:
+                # Fallback to legacy or default logic
+                 template_columns = service.get_template_settings(org_id)
+                 pdf_settings = {'columns': template_columns} if template_columns else None
 
             # Assuming quote['snapshot'] contains the data needed for PDF
             html_content = service.generate_quote_pdf_html(quote['snapshot'], org_name=org_name, pdf_settings=pdf_settings)
@@ -466,3 +480,135 @@ class ProductListByFamilyView(APIView):
         products = service.get_products_by_family(org_id, family_id)
         serializer = ProductSerializer(products, many=True)
         return Response(serializer.data)
+
+class CustomerListView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        service = DynamoDBService()
+        org_id = get_org_id(request)
+        if not org_id:
+            return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        customers = service.get_customers(org_id)
+        serializer = CustomerSerializer(customers, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        service = DynamoDBService()
+        org_id = get_org_id(request)
+        if not org_id:
+            return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = CustomerSerializer(data=request.data)
+        if serializer.is_valid():
+            created_customer = service.create_customer(org_id, serializer.validated_data)
+            if created_customer:
+                return Response(CustomerSerializer(created_customer).data, status=status.HTTP_201_CREATED)
+            return Response({"error": "Failed to create customer"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class CustomerDetailView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, customer_id):
+        service = DynamoDBService()
+        org_id = get_org_id(request)
+        if not org_id:
+            return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        customer = service.get_customer(org_id, str(customer_id))
+        if customer:
+            return Response(CustomerSerializer(customer).data)
+        return Response({"error": "Customer not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    def put(self, request, customer_id):
+        service = DynamoDBService()
+        org_id = get_org_id(request)
+        if not org_id:
+            return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = CustomerSerializer(data=request.data)
+        if serializer.is_valid():
+            updated_customer = service.update_customer(org_id, customer_id, serializer.validated_data)
+            if updated_customer:
+                customer = service.get_customer(org_id, customer_id)
+                return Response(CustomerSerializer(customer).data)
+            return Response({"error": "Failed to update customer"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, customer_id):
+        service = DynamoDBService()
+        org_id = get_org_id(request)
+        if not org_id:
+            return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if service.delete_customer(org_id, customer_id):
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({"error": "Failed to delete customer"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class PDFTemplateListView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        service = DynamoDBService()
+        org_id = get_org_id(request)
+        if not org_id:
+            return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        templates = service.get_pdf_templates(org_id)
+        serializer = PDFTemplateSerializer(templates, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        service = DynamoDBService()
+        org_id = get_org_id(request)
+        if not org_id:
+            return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = PDFTemplateSerializer(data=request.data)
+        if serializer.is_valid():
+            created_template = service.create_pdf_template(org_id, serializer.validated_data)
+            if created_template:
+                return Response(PDFTemplateSerializer(created_template).data, status=status.HTTP_201_CREATED)
+            return Response({"error": "Failed to create PDF template"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class PDFTemplateDetailView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, template_id):
+        service = DynamoDBService()
+        org_id = get_org_id(request)
+        if not org_id:
+            return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        template = service.get_pdf_template(org_id, template_id)
+        if template:
+            return Response(PDFTemplateSerializer(template).data)
+        return Response({"error": "PDF template not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    def put(self, request, template_id):
+        service = DynamoDBService()
+        org_id = get_org_id(request)
+        if not org_id:
+            return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = PDFTemplateSerializer(data=request.data)
+        if serializer.is_valid():
+            updated_template = service.update_pdf_template(org_id, template_id, serializer.validated_data)
+            if updated_template:
+                template = service.get_pdf_template(org_id, template_id)
+                return Response(PDFTemplateSerializer(template).data)
+            return Response({"error": "Failed to update PDF template"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, template_id):
+        service = DynamoDBService()
+        org_id = get_org_id(request)
+        if not org_id:
+            return Response({"error": "No organization associated with user"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if service.delete_pdf_template(org_id, template_id):
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({"error": "Failed to delete PDF template"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

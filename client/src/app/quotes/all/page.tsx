@@ -67,10 +67,10 @@ const AllQuotesPage: React.FC = () => {
         const newQuotes = quotes.filter((q) => q.SK !== sk);
         setQuotes(newQuotes);
         setFilteredQuotes(newQuotes.filter(
-            (quote) =>
-              quote.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              quote.status?.toLowerCase().includes(searchQuery.toLowerCase())
-          ));
+          (quote) =>
+            quote.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            quote.status?.toLowerCase().includes(searchQuery.toLowerCase())
+        ));
       } catch (err) {
         alert('Failed to delete quote.');
       }
@@ -86,7 +86,7 @@ const AllQuotesPage: React.FC = () => {
             Manage and view all your created quotations.
           </p>
         </div>
-        <Button onClick={() => router.push('/quotes/new')}>
+        <Button onClick={() => router.push('/quotes/editor')}>
           <Plus className="mr-2 h-4 w-4" /> New Quote
         </Button>
       </div>
@@ -131,54 +131,55 @@ const AllQuotesPage: React.FC = () => {
                 <TableBody>
                   {filteredQuotes.length > 0 ? (
                     filteredQuotes.map((quote) => {
-                       const quoteId = quote.SK.split('#')[1];
-                       return (
-                      <TableRow key={quote.SK}>
-                        <TableCell className="font-medium">
-                          {quote.customer_name}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={quote.status === 'DRAFT' ? 'outline' : 'default'}>
-                            {quote.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {quote.total_amount?.toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {new Date(quote.created_at).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => router.push(`/quotes/${quoteId}`)}
-                              title="View"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => router.push(`/quotes/editor?id=${quoteId}`)}
-                              title="Edit"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(quote.SK)}
-                              title="Delete"
-                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )})
+                      const quoteId = quote.SK.split('#')[1];
+                      return (
+                        <TableRow key={quote.SK}>
+                          <TableCell className="font-medium">
+                            {quote.customer_name}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={quote.status === 'DRAFT' ? 'outline' : 'default'}>
+                              {quote.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {quote.total_amount?.toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {new Date(quote.created_at).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => router.push(`/quotes/${quoteId}`)}
+                                title="View"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => router.push(`/quotes/editor?id=${quoteId}`)}
+                                title="Edit"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDelete(quote.SK)}
+                                title="Delete"
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
                   ) : (
                     <TableRow>
                       <TableCell colSpan={5} className="h-24 text-center">

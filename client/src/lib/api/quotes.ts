@@ -1,17 +1,6 @@
 import api from './client';
-
-export interface Quote {
-  PK: string;
-  SK: string;
-  status: string;
-  customer_name: string;
-  total_amount: number;
-  created_at: string;
-  s3_pdf_link?: string;
-  snapshot?: any;
-  items?: any[]; // Adjust type as needed based on backend response
-  families?: any[];
-}
+import { Quote } from '@/lib/types';
+export type { Quote };
 
 export const getQuotes = async (): Promise<Quote[]> => {
   const response = await api.get('/quotes/mine/');
@@ -37,8 +26,8 @@ export const deleteQuote = async (id: string): Promise<void> => {
   await api.delete(`/quotes/${id}/`);
 };
 
-export const generatePdf = async (id: string): Promise<void> => {
-  await api.post(`/quotes/${id}/generate-pdf/`);
+export const generatePdf = async (id: string, templateId?: string): Promise<void> => {
+  await api.post(`/quotes/${id}/generate-pdf/`, { template_id: templateId });
 };
 
 export const getPresignedUrl = async (id: string): Promise<string> => {
@@ -54,4 +43,36 @@ export const getTemplateSettings = async (): Promise<any[]> => {
 export const updateTemplateSettings = async (columns: any[]): Promise<any[]> => {
   const response = await api.post('/quotes/templates/settings/', { columns });
   return response.data.columns;
+};
+
+// PDF Templates
+export interface PDFTemplate {
+  id: string;
+  name: string;
+  columns: any[];
+  created_at?: string;
+}
+
+export const getPDFTemplates = async (): Promise<PDFTemplate[]> => {
+  const response = await api.get('/quotes/pdf-templates/');
+  return response.data;
+};
+
+export const getPDFTemplate = async (id: string): Promise<PDFTemplate> => {
+  const response = await api.get(`/quotes/pdf-templates/${id}/`);
+  return response.data;
+};
+
+export const createPDFTemplate = async (data: Partial<PDFTemplate>): Promise<PDFTemplate> => {
+  const response = await api.post('/quotes/pdf-templates/', data);
+  return response.data;
+};
+
+export const updatePDFTemplate = async (id: string, data: Partial<PDFTemplate>): Promise<PDFTemplate> => {
+  const response = await api.put(`/quotes/pdf-templates/${id}/`, data);
+  return response.data;
+};
+
+export const deletePDFTemplate = async (id: string): Promise<void> => {
+  await api.delete(`/quotes/pdf-templates/${id}/`);
 };

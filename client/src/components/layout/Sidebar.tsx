@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Package, FileText, Settings } from 'lucide-react';
+import { Home, Package, FileText, Settings, Users } from 'lucide-react';
 import { useAuthStore } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 
@@ -14,12 +14,13 @@ export function Sidebar() {
   const navItems = [
     { href: '/quotes', icon: Home, label: 'Dashboard' },
     { href: '/quotes/all', icon: FileText, label: 'All Quotes' },
+    { href: '/quotes/customers', icon: Users, label: 'Customers' },
   ];
 
   const adminNavItems = [
-    { href: '/admin/products', icon: Package, label: 'Products' },
+    { href: '/quotes/products', icon: Package, label: 'Products' },
     { href: '/quotes/master-items', icon: Package, label: 'Master Items' },
-    { href: '/admin/templates', icon: FileText, label: 'PDF Templates' },
+    { href: '/quotes/templates', icon: FileText, label: 'PDF Templates' },
   ];
 
   return (
