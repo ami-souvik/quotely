@@ -1,15 +1,61 @@
 
 import React from 'react';
-import { Page, Text, View, Document, StyleSheet, Image } from '@react-pdf/renderer';
+import { Page, Text, View, Document, StyleSheet, Image, Font } from '@react-pdf/renderer';
+
+import path from 'path';
+
+const getFontSrc = (fontFile: string) => {
+    if (typeof window === 'undefined') {
+        // Server-side
+        return path.resolve(process.cwd(), 'public/fonts', fontFile);
+    }
+    // Client-side
+    return `/fonts/${fontFile}`;
+};
+
+Font.register({
+    family: 'Inter',
+    fonts: [
+        { src: getFontSrc('Inter_28pt-Regular.ttf'), fontWeight: 400 },
+        { src: getFontSrc('Inter_28pt-Bold.ttf'), fontWeight: 700 },
+    ]
+});
 
 // Styles
 const styles = StyleSheet.create({
     page: {
-        fontFamily: 'Helvetica',
+        fontFamily: 'Inter', // Updated to Inter
         fontSize: 10,
         lineHeight: 1.4,
         color: '#333',
-        padding: 40, // ~10mm + padding
+        paddingTop: 150, // Space for fixed header
+        paddingBottom: 70, // Space for fixed footer
+        paddingHorizontal: 40,
+    },
+    headerFixed: {
+        position: 'absolute',
+        top: 30,
+        left: 40,
+        right: 40,
+    },
+    footer: {
+        position: 'absolute',
+        bottom: 30,
+        left: 40,
+        right: 40,
+        textAlign: 'center',
+        borderTopWidth: 1,
+        borderTopColor: '#eee',
+        paddingTop: 10,
+    },
+    pageNumber: {
+        position: 'absolute',
+        fontSize: 10,
+        bottom: -20, // relative to footer container
+        left: 0,
+        right: 0,
+        textAlign: 'center',
+        color: '#999',
     },
     headerRow: {
         width: '100%',
@@ -114,29 +160,27 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#333',
         backgroundColor: '#f9f9f9',
-        paddingVertical: 4,
+        paddingVertical: 5,
         alignItems: 'center',
     },
     tableRow: {
         flexDirection: 'row',
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
-        paddingVertical: 4,
+        paddingVertical: 5,
     },
     th: {
         fontSize: 11,
         fontWeight: 'bold',
-        // flex: 1, // dynamic
     },
     td: {
         fontSize: 11,
-        // flex: 1, // dynamic
     },
 
     // Totals
     summaryRow: {
         flexDirection: 'row',
-        paddingVertical: 2,
+        paddingVertical: 3,
         backgroundColor: '#f9f9f9',
         marginTop: 0,
     },
@@ -187,7 +231,8 @@ export const QuotePDFDocument: React.FC<QuotePDFProps> = ({ quoteData, orgSettin
         <Document>
             <Page size="A4" style={styles.page}>
                 {/* Header */}
-                <View>
+                {/* Fixed Header */}
+                <View fixed style={styles.headerFixed}>
                     <View style={styles.headerRow}>
                         <View style={styles.logoSection}>
                             {orgLogo && <Image src={orgLogo} style={styles.logo} />}
@@ -201,54 +246,63 @@ export const QuotePDFDocument: React.FC<QuotePDFProps> = ({ quoteData, orgSettin
                     <View style={styles.headerRow}>
                         <View style={{ width: '100%' }}>
                             <View style={styles.infoRow}>
-                                <Text style={styles.labelRight}>CONTACT:</Text>
+                                <Text style={styles.labelRight}>CONTACT</Text>
                                 <Text style={styles.valueRight}>{orgContact}</Text>
                             </View>
                             <View style={styles.infoRow}>
-                                <Text style={styles.labelRight}>EMAIL:</Text>
+                                <Text style={styles.labelRight}>EMAIL</Text>
                                 <Text style={styles.valueRight}>{orgEmail}</Text>
                             </View>
                             <View style={styles.infoRow}>
-                                <Text style={styles.labelRight}>ADDRESS:</Text>
+                                <Text style={styles.labelRight}>ADDRESS</Text>
                                 <Text style={styles.valueRight}>{orgAddress}</Text>
                             </View>
                         </View>
                         <View style={{ width: '100%' }}>
                             <View style={styles.infoRow}>
-                                <Text style={styles.labelRight}>DATE:</Text>
+                                <Text style={styles.labelRight}>DATE</Text>
                                 <Text style={styles.valueRight}>{createdDate}</Text>
                             </View>
                             <View style={styles.infoRow}>
-                                <Text style={styles.labelRight}>QUOTE ID:</Text>
+                                <Text style={styles.labelRight}>QUOTE ID</Text>
                                 <Text style={styles.valueRight}>{displayId}</Text>
                             </View>
                         </View>
                     </View>
+                    <View style={styles.separator} />
                 </View>
 
-                <View style={styles.separator} />
+                {/* Info Section - Not fixed, but part of first page context usually. 
+                    However, if we want repeated headers on ALL pages, usually that just means the logo/org info.
+                    The user said "Header section fixed and will be repeated".
+                    Usually customer info is only on page 1.
+                    Let's keep customer info flexible (not fixed) so it scrolls away, 
+                    but keep the top Org/Quote info fixed.
+                */}
 
-                {/* Info Section */}
+                {/* Space for fixed header on subsequent pages if needed, or just let natural flow handle it if padding is right.
+                    React-pdf 'fixed' elements are taken out of flow. We need page padding-top to compensate.
+                */}
+
+                {/* Info Section (Customer Details) */}
                 <View style={styles.infoSection}>
-                    {/* <View style={styles.infoBoxLeft}> */}
                     <Text style={{ fontSize: 14, lineHeight: 1.6, fontWeight: 'bold' }}>CUSTOMER DETAILS:</Text>
                     <View style={styles.infoRow}>
-                        <Text style={styles.label}>NAME:</Text>
+                        <Text style={styles.label}>NAME</Text>
                         <Text style={styles.value}>{customerName}</Text>
                     </View>
                     <View style={styles.infoRow}>
-                        <Text style={styles.label}>EMAIL:</Text>
+                        <Text style={styles.label}>EMAIL</Text>
                         <Text style={styles.value}>{data.customer_email || ''}</Text>
                     </View>
                     <View style={styles.infoRow}>
-                        <Text style={styles.label}>PHONE:</Text>
+                        <Text style={styles.label}>PHONE</Text>
                         <Text style={styles.value}>{data.customer_phone || ''}</Text>
                     </View>
                     <View style={styles.infoRow}>
-                        <Text style={styles.label}>ADDRESS:</Text>
+                        <Text style={styles.label}>ADDRESS</Text>
                         <Text style={styles.value}>{data.customer_address || ''}</Text>
                     </View>
-                    {/* </View> */}
                 </View>
 
                 <Text style={styles.greeting}>
@@ -327,9 +381,9 @@ export const QuotePDFDocument: React.FC<QuotePDFProps> = ({ quoteData, orgSettin
                                             } else if (key === 'family' || key === 'family_name') {
                                                 val = familyName;
                                             } else if (key === 'unit_price' || key === 'price') {
-                                                val = `INR ${parseFloat(item.unit_price || 0).toFixed(2)}`;
+                                                val = `₹ ${parseFloat(item.unit_price || 0).toFixed(2)}`;
                                             } else if (key === 'total') {
-                                                val = `INR ${parseFloat(item.total || 0).toFixed(2)}`;
+                                                val = `₹ ${parseFloat(item.total || 0).toFixed(2)}`;
                                             } else {
                                                 val = item.custom_fields?.[key] || item[key] || '';
                                             }
@@ -357,19 +411,19 @@ export const QuotePDFDocument: React.FC<QuotePDFProps> = ({ quoteData, orgSettin
                                             <View style={styles.summaryRow}>
                                                 <View style={{ flex: 1 }}></View>
                                                 <Text style={{ width: '30%', textAlign: 'right', fontWeight: 'bold', paddingRight: 4 }}>SUB TOTAL</Text>
-                                                <Text style={{ width: '20%', textAlign: 'right', paddingRight: 2 }}>INR {subtotal.toFixed(2)}</Text>
+                                                <Text style={{ width: '20%', textAlign: 'right', paddingRight: 2 }}>₹ {subtotal.toFixed(2)}</Text>
                                             </View>
                                             {margin > 0 && (
                                                 <>
                                                     <View style={styles.summaryRow}>
                                                         <View style={{ flex: 1 }}></View>
                                                         <Text style={{ width: '30%', textAlign: 'right', fontWeight: 'bold', textTransform: 'uppercase', paddingRight: 4 }}>Margin Applied ({(margin * 100).toFixed(0)}%)</Text>
-                                                        <Text style={{ width: '20%', textAlign: 'right', paddingRight: 2 }}>INR {(subtotal * margin).toFixed(2)}</Text>
+                                                        <Text style={{ width: '20%', textAlign: 'right', paddingRight: 2 }}>₹ {(subtotal * margin).toFixed(2)}</Text>
                                                     </View>
                                                     <View style={styles.summaryRow}>
                                                         <View style={{ flex: 1 }}></View>
                                                         <Text style={{ width: '30%', textAlign: 'right', fontWeight: 'bold', textTransform: 'uppercase', paddingRight: 4 }}>SECTION TOTAL</Text>
-                                                        <Text style={{ width: '20%', textAlign: 'right', paddingRight: 2 }}>INR {(subtotal * (1 + margin)).toFixed(2)}</Text>
+                                                        <Text style={{ width: '20%', textAlign: 'right', paddingRight: 2 }}>₹ {(subtotal * (1 + margin)).toFixed(2)}</Text>
                                                     </View>
                                                 </>
                                             )}
@@ -382,8 +436,17 @@ export const QuotePDFDocument: React.FC<QuotePDFProps> = ({ quoteData, orgSettin
                 })}
 
                 <Text style={styles.grandTotal}>
-                    GRAND TOTAL: INR {totalAmount}
+                    GRAND TOTAL: ₹ {totalAmount}
                 </Text>
+
+                <View fixed style={styles.footer}>
+                    <Text>If you have any questions about this price quote, please reach out to us</Text>
+                    <Text style={{ fontWeight: 'bold', marginTop: 4 }}>Thank You For Your Business!</Text>
+                    {/* Page Numbers */}
+                    <Text style={styles.pageNumber} render={({ pageNumber, totalPages }) => (
+                        `${pageNumber} / ${totalPages}`
+                    )} fixed />
+                </View>
             </Page>
         </Document>
     );

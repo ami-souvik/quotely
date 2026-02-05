@@ -64,6 +64,39 @@ const DUMMY_QUOTE = {
                 items: [
                     { name: "Labor", qty: 4, unit_price: 500, total: 2000, unit_type: "hours" }
                 ]
+            },
+            {
+                family_name: "Bedroom Furniture",
+                subtotal: 12000,
+                margin_applied: 0.05,
+                items: [
+                    { name: "Queen Bed Frame", qty: 1, unit_price: 8000, total: 8000, unit_type: "pcs" },
+                    { name: "Bedside Table", qty: 2, unit_price: 2000, total: 4000, unit_type: "pcs" },
+                    { name: "Table Lamp", qty: 2, unit_price: 500, total: 1000, unit_type: "pcs" },
+                    { name: "Wardrobe", qty: 1, unit_price: 15000, total: 15000, unit_type: "pcs" }
+                ]
+            },
+            {
+                family_name: "Office Setup",
+                subtotal: 15000,
+                margin_applied: 0.1,
+                items: [
+                    { name: "Ergonomic Chair", qty: 2, unit_price: 4000, total: 8000, unit_type: "pcs" },
+                    { name: "Standing Desk", qty: 1, unit_price: 7000, total: 7000, unit_type: "pcs" },
+                    { name: "Monitor Arm", qty: 2, unit_price: 1500, total: 3000, unit_type: "pcs" }
+                ]
+            },
+            {
+                family_name: "Kitchen Appliances",
+                subtotal: 25000,
+                margin_applied: 0.08,
+                items: [
+                    { name: "Refrigerator", qty: 1, unit_price: 18000, total: 18000, unit_type: "pcs" },
+                    { name: "Microwave Oven", qty: 1, unit_price: 5000, total: 5000, unit_type: "pcs" },
+                    { name: "Dishwasher", qty: 1, unit_price: 12000, total: 12000, unit_type: "pcs" },
+                    { name: "Coffee Maker", qty: 1, unit_price: 3000, total: 3000, unit_type: "pcs" },
+                    { name: "Toaster", qty: 1, unit_price: 1500, total: 1500, unit_type: "pcs" }
+                ]
             }
         ]
     },
