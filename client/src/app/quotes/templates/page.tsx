@@ -12,6 +12,7 @@ import {
     deletePDFTemplate,
     PDFTemplate
 } from '@/lib/api/quotes';
+import { getOrganization, Organization } from '@/lib/api/organization';
 import { Loader2, GripVertical, Plus, Trash2, FileText } from 'lucide-react';
 import {
     DndContext,
@@ -30,6 +31,53 @@ import {
     useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import dynamic from 'next/dynamic';
+import { QuotePDFDocument } from '@/lib/pdf-document';
+
+const PDFViewer = dynamic(() => import('@react-pdf/renderer').then(mod => mod.PDFViewer), {
+    ssr: false,
+    loading: () => <p className="p-4 text-center text-sm text-muted-foreground">Loading Preview...</p>,
+});
+
+const DUMMY_QUOTE = {
+    snapshot: {
+        customer_name: "Acme Corp",
+        customer_email: "contact@acme.com",
+        customer_phone: "+1 555 0101",
+        customer_address: "123 Innovation Dr, Tech City",
+        total_amount: "15400.00",
+        families: [
+            {
+                family_name: "Living Room Setup",
+                subtotal: 10000,
+                margin_applied: 0.1,
+                items: [
+                    { name: "Sofa Sectional", qty: 1, unit_price: 5000, total: 5000, unit_type: "pcs" },
+                    { name: "Coffee Table", qty: 1, unit_price: 2000, total: 2000, unit_type: "pcs" },
+                    { name: "Floor Lamp", qty: 2, unit_price: 1500, total: 3000, unit_type: "pcs" }
+                ]
+            },
+            {
+                family_name: "Installation Services",
+                subtotal: 2000,
+                margin_applied: 0,
+                items: [
+                    { name: "Labor", qty: 4, unit_price: 500, total: 2000, unit_type: "hours" }
+                ]
+            }
+        ]
+    },
+    display_id: "PREVIEW-001",
+    created_at: new Date().toISOString()
+};
+
+// Fallback if org fetch fails
+const FALLBACK_ORG = {
+    name: "My Design Studio",
+    logo_url: "",
+    contact_number: "+1 234 567 8900",
+    email: "hello@designstudio.com"
+};
 
 interface ColumnConfig {
     key: string;
@@ -60,7 +108,7 @@ function SortableItem({ col, index, onToggle, onLabelChange }: SortableItemProps
     };
 
     return (
-        <div ref={setNodeRef} style={style} className="flex items-center gap-4 p-3 border rounded-md bg-white hover:bg-muted/50 transition-colors">
+        <div ref={setNodeRef} style={style} className="flex items-center gap-2 p-2 border rounded-md bg-white hover:bg-muted/50 transition-colors">
             <div {...attributes} {...listeners} className="cursor-move text-gray-400 hover:text-gray-600">
                 <GripVertical className="h-5 w-5" />
             </div>
@@ -71,7 +119,7 @@ function SortableItem({ col, index, onToggle, onLabelChange }: SortableItemProps
                 onChange={(e) => onToggle(index, e.target.checked)}
                 className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
             />
-            <div className="flex-1 grid grid-cols-2 gap-4 items-center">
+            <div className="flex-1 grid grid-cols-2 gap-2 items-center">
                 <label htmlFor={`col-${col.key}`} className="text-sm font-medium cursor-pointer select-none">
                     {col.key} <span className="text-xs text-muted-foreground ml-1">({col.isSystem ? 'System' : 'Custom'})</span>
                 </label>
@@ -90,6 +138,7 @@ export default function TemplatesPage() {
     const [templates, setTemplates] = useState<PDFTemplate[]>([]);
     const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
     const [columns, setColumns] = useState<ColumnConfig[]>([]);
+    const [orgData, setOrgData] = useState<Organization | null>(null);
 
     // UI States
     const [loading, setLoading] = useState(true);
@@ -106,7 +155,7 @@ export default function TemplatesPage() {
     );
 
     useEffect(() => {
-        fetchTemplates();
+        fetchData();
     }, []);
 
     // When template changes, load its columns
@@ -121,16 +170,20 @@ export default function TemplatesPage() {
         }
     }, [selectedTemplateId, templates]); // Depend on templates too in case they are reloaded
 
-    const fetchTemplates = async () => {
+    const fetchData = async () => {
         setLoading(true);
         try {
-            const data = await getPDFTemplates();
-            setTemplates(data);
-            if (data.length > 0 && !selectedTemplateId) {
-                setSelectedTemplateId(data[0].id);
+            const [tmplData, org] = await Promise.all([
+                getPDFTemplates(),
+                getOrganization() // Fetch organization details
+            ]);
+            setTemplates(tmplData);
+            setOrgData(org);
+            if (tmplData.length > 0 && !selectedTemplateId) {
+                setSelectedTemplateId(tmplData[0].id);
             }
         } catch (err: any) {
-            setError(err.message || "Failed to load templates");
+            setError(err.message || "Failed to load data");
         } finally {
             setLoading(false);
         }
@@ -298,8 +351,8 @@ export default function TemplatesPage() {
     return (
         <div className="flex h-[calc(100vh-64px)] overflow-hidden">
             {/* Sidebar: List of Templates */}
-            <div className="w-80 border-r bg-gray-50 flex flex-col">
-                <div className="p-4 border-b">
+            <div className="w-50 border-r bg-gray-50 flex flex-col">
+                <div className="p-2 border-b">
                     <h2 className="font-semibold mb-4">PDF Templates</h2>
                     <div className="flex gap-2">
                         <Input
@@ -313,7 +366,7 @@ export default function TemplatesPage() {
                         </Button>
                     </div>
                 </div>
-                <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                <div className="flex-1 overflow-y-auto p-3 space-y-1">
                     {templates.map(tmpl => (
                         <div
                             key={tmpl.id}
@@ -342,28 +395,23 @@ export default function TemplatesPage() {
                 </div>
             </div>
 
-            {/* Main Content: Editor */}
+            {/* Main Content: Editor & Preview */}
             <div className="flex-1 flex flex-col bg-white overflow-hidden">
                 {selectedTemplateId ? (
-                    <div className="flex-1 overflow-y-auto p-6">
-                        <div className="max-w-3xl mx-auto space-y-6">
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <h1 className="text-2xl font-bold">{templates.find(t => t.id === selectedTemplateId)?.name}</h1>
-                                    <p className="text-gray-500">Configure columns for this PDF template.</p>
-                                </div>
-                                <Button onClick={handleSaveColumns} disabled={saving} className="bg-green-600 hover:bg-green-700 text-white">
-                                    {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                    Save Configuration
-                                </Button>
-                            </div>
-
-                            <Card>
-                                <CardHeader className="pb-4">
-                                    <CardTitle className="text-lg">Columns</CardTitle>
-                                    <CardDescription>Drag to reorder. Toggle to show/hide. Rename labels as needed.</CardDescription>
-                                </CardHeader>
-                                <CardContent>
+                    <div className="flex h-full">
+                        {/* Editor Column */}
+                        <div className="w-[40%] flex flex-col border-r">
+                            <div className="flex-1 overflow-y-auto p-3">
+                                <div className="space-y-6">
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <h1 className="text-2xl font-bold">{templates.find(t => t.id === selectedTemplateId)?.name} (Columns)</h1>
+                                            <p className="text-gray-500">Configure columns for this PDF template.</p>
+                                            <p className="text-sm text-muted-foreground italic">
+                                                Drag to reorder. Toggle to show/hide.
+                                            </p>
+                                        </div>
+                                    </div>
                                     <DndContext
                                         sensors={sensors}
                                         collisionDetection={closestCenter}
@@ -386,8 +434,31 @@ export default function TemplatesPage() {
                                             </div>
                                         </SortableContext>
                                     </DndContext>
-                                </CardContent>
-                            </Card>
+                                </div>
+                            </div>
+                            {/* Save Button Footer */}
+                            <div className="p-4 border-t bg-gray-50 flex justify-end">
+                                <Button onClick={handleSaveColumns} disabled={saving} className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto">
+                                    {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                    Save Configuration
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Preview Column */}
+                        <div className="w-[60%] bg-gray-100 p-3 flex flex-col border-l">
+                            <div className="mb-2 flex items-center justify-between">
+                                <h3 className="font-semibold text-sm uppercase text-gray-500">Live Preview</h3>
+                            </div>
+                            <div className="flex-1 border rounded bg-white shadow-sm overflow-hidden relative">
+                                <PDFViewer width="100%" height="100%" showToolbar={true}>
+                                    <QuotePDFDocument
+                                        quoteData={DUMMY_QUOTE}
+                                        orgSettings={orgData || FALLBACK_ORG}
+                                        pdfSettings={{ columns: columns.filter(c => c.selected) }}
+                                    />
+                                </PDFViewer>
+                            </div>
                         </div>
                     </div>
                 ) : (

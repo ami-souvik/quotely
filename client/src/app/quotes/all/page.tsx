@@ -212,18 +212,9 @@ const AllQuotesPage: React.FC = () => {
                             size="icon"
                             onClick={() => handlePdfAction(quote.SK, 'preview')}
                             disabled={processingId === quoteId}
-                            title="Preview PDF"
-                          >
-                            {processingId === quoteId && pdfMode === 'preview' ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handlePdfAction(quote.SK, 'download')}
-                            disabled={processingId === quoteId}
                             title="Download PDF"
                           >
-                            {processingId === quoteId && pdfMode === 'download' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                            {processingId === quoteId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                           </Button>
                           <Button
                             variant="ghost"
@@ -282,7 +273,8 @@ const AllQuotesPage: React.FC = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowTemplateDialog(false)}>Cancel</Button>
             <Button onClick={confirmPdfAction}>
-              {pdfMode === 'download' ? 'Generate & Download' : 'Generate & Preview'}
+              {processingId ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+              Generate & Download
             </Button>
           </DialogFooter>
         </DialogContent>

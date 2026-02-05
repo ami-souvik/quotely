@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticate } from '@/lib/auth-server';
 import { services } from '@/lib/services';
-import { generateQuotePdfHtml } from '@/lib/pdf-generator';
+
 import { generatePdfBuffer } from '@/lib/pdf';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -42,11 +42,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     
     // 4. Generate HTML
     const quoteData = { ...quote, ...(quote.snapshot || {}) };
-    const html = generateQuotePdfHtml(quoteData, orgSettings, pdfSettings);
-
     // 4. Generate PDF
     try {
-        const pdfBuffer = await generatePdfBuffer(html);
+        const pdfBuffer = await generatePdfBuffer(quoteData, orgSettings, pdfSettings);
         
         // 5. Upload to S3
         const s3Url = await services.uploadPDFToS3(pdfBuffer, user.org_id, quoteId);

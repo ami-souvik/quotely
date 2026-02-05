@@ -20,7 +20,6 @@ export function Sidebar() {
   const adminNavItems = [
     { href: '/quotes/products', icon: Package, label: 'Products' },
     { href: '/quotes/templates', icon: FileText, label: 'PDF Templates' },
-    { href: '/api/preview-html', icon: FileCode, label: 'HTML Preview', target: '_blank' },
   ];
 
   return (

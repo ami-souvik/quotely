@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Loader2, Edit, Download, FileText, Eye } from 'lucide-react';
+import { ArrowLeft, Loader2, Edit, Download, FileText } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Dialog,
@@ -148,11 +148,7 @@ const QuoteDetailPage: React.FC = () => {
         </Button>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => handlePdfAction('preview')} disabled={downloading}>
-            {downloading && pdfMode === 'preview' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Eye className="mr-2 h-4 w-4" />}
-            Preview PDF
-          </Button>
-          <Button variant="outline" onClick={() => handlePdfAction('download')} disabled={downloading}>
-            {downloading && pdfMode === 'download' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+            {downloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
             Download PDF
           </Button>
           <Button onClick={() => router.push(`/quotes/editor?id=${id}`)}>
@@ -251,8 +247,8 @@ const QuoteDetailPage: React.FC = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowTemplateDialog(false)}>Cancel</Button>
             <Button onClick={confirmPdfAction} disabled={downloading}>
-              {downloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (pdfMode === 'download' ? <Download className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />)}
-              {pdfMode === 'download' ? 'Generate & Download' : 'Generate & Preview'}
+              {downloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+              Generate & Download
             </Button>
           </DialogFooter>
         </DialogContent>
