@@ -145,6 +145,7 @@ export class QuotelyService {
       };
 
       if (data.name !== undefined) addUpdate('name', data.name);
+      if (data.tagline !== undefined) addUpdate('tagline', data.tagline);
       if (data.logo_url !== undefined) addUpdate('logo_url', data.logo_url);
       if (data.contact_number !== undefined) addUpdate('contact_number', data.contact_number);
       if (data.email !== undefined) addUpdate('email', data.email);

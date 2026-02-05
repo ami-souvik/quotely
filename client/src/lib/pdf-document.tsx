@@ -11,63 +11,63 @@ const styles = StyleSheet.create({
         color: '#333',
         padding: 40, // ~10mm + padding
     },
-    headerContainer: {
+    headerRow: {
+        width: '100%',
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: 20,
+        gap: 20,
+        marginBottom: 10,
     },
     logoSection: {
         flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
+        alignItems: 'flex-start',
+        gap: 4,
+        marginBottom: 4
     },
     logo: {
-        width: 50,
-        height: 50,
+        width: 40,
+        height: 40,
         objectFit: 'contain',
     },
     orgDetails: {
         marginLeft: 10,
     },
     orgName: {
-        fontSize: 16,
+        fontSize: 20,
         marginBottom: 12,
         fontWeight: 'bold',
         color: '#000',
     },
+    orgTagline: {
+        fontSize: 12,
+        color: '#000',
+    },
     orgInfo: {
         fontSize: 10,
-        marginVertical: 1,
+        marginBottom: 2,
+        textTransform: 'uppercase',
     },
     title: {
-        fontSize: 28,
+        fontSize: 20,
+        textAlign: 'right',
         color: '#1a1a1a',
         fontWeight: 'bold',
     },
     separator: {
         borderBottomWidth: 1,
-        borderBottomColor: '#333',
-        marginVertical: 10,
+        borderBottomColor: '#333'
     },
     infoSection: {
-        flexDirection: 'row',
-        marginTop: 20,
-        gap: 10,
-    },
-    infoBoxLeft: {
-        flex: 1,
-    },
-    infoBoxRight: {
-        width: 200,
-        alignItems: 'flex-end',
+        marginTop: 8,
+        gap: 2
     },
     infoGrid: {
         // flexDirection: 'row', // nested grids are tricky, just use blocks for now or flex-row lines
     },
     infoRow: {
         flexDirection: 'row',
-        marginBottom: 4,
+        justifyContent: 'space-between',
+        marginBottom: 2
     },
     label: {
         fontWeight: 'bold',
@@ -79,28 +79,28 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
     },
     labelRight: {
+        width: 60,
         fontWeight: 'bold',
-        width: 80,
-        textAlign: 'left',
+        textAlign: 'left'
     },
     valueRight: {
+        width: 140,
         textAlign: 'right',
     },
     greeting: {
         marginTop: 20,
         fontSize: 14,
-        lineHeight: 1.4,
-        marginBottom: 10,
+        lineHeight: 1.4
     },
 
     // Table
     familySection: {
-        marginTop: 15,
+        // marginTop: 15,
     },
     familyTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        marginBottom: 10,
+        marginBottom: 14,
         marginTop: 10,
     },
     table: {
@@ -109,9 +109,9 @@ const styles = StyleSheet.create({
     },
     tableHeader: {
         flexDirection: 'row',
-        borderTopWidth: 2,
+        borderTopWidth: 1,
         borderTopColor: '#333',
-        borderBottomWidth: 2,
+        borderBottomWidth: 1,
         borderBottomColor: '#333',
         backgroundColor: '#f9f9f9',
         paddingVertical: 4,
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
     // Totals
     summaryRow: {
         flexDirection: 'row',
-        paddingVertical: 4,
+        paddingVertical: 2,
         backgroundColor: '#f9f9f9',
         marginTop: 0,
     },
@@ -166,13 +166,20 @@ export const QuotePDFDocument: React.FC<QuotePDFProps> = ({ quoteData, orgSettin
     const totalAmount = parseFloat(data.total_amount || quoteData.total_amount || 0).toFixed(2);
 
     const orgName = orgSettings?.name || "Quotely";
-    // React-pdf Image doesn't support SVGs nicely via src. If logo is SVG, this might break. 
-    // Ideally we should use a png/jpg fallback.
-    console.log('Logo Url: ', orgSettings.logo_url);
+    const orgTagline = orgSettings?.tagline;
+    const defaultLogo = "https://placehold.co/100x100.png?text=Logo";
+    let orgLogo = orgSettings?.logo_url || defaultLogo;
 
-    const orgLogo = orgSettings?.logo_url || "https://www.reflectyourvibe.in/images/favicon.svg";
+    // React-pdf Image doesn't support SVGs nicely via src. 
+    if (orgLogo && orgLogo.toLowerCase().endsWith('.svg')) {
+        console.warn(`Quotely: SVG logos are not supported in PDF generation. Please use PNG/JPG. URL: ${orgLogo}`);
+        // Fallback to default if custom logo is SVG, or just don't show it if default is also SVG (unlikely with new default)
+        orgLogo = defaultLogo;
+    }
+
     const orgContact = orgSettings?.contact_number || "+91 1234567890";
     const orgEmail = orgSettings?.email || "support@quotely.com";
+    const orgAddress = orgSettings?.address || "123 Main St, City, Country";
 
     const displayId = quoteData.display_id || quoteData.id || quoteData.SK?.split('#')[1] || 'NEW';
 
@@ -180,53 +187,68 @@ export const QuotePDFDocument: React.FC<QuotePDFProps> = ({ quoteData, orgSettin
         <Document>
             <Page size="A4" style={styles.page}>
                 {/* Header */}
-                <View style={styles.headerContainer}>
-                    <View style={styles.logoSection}>
-                        {/* Note: If orgLogo is SVG, this might fail to render or render blank */}
-                        {orgLogo && <Image src={orgLogo} style={styles.logo} />}
-                        <View style={styles.orgDetails}>
-                            <Text style={styles.orgName}>{orgName}</Text>
-                            <Text style={styles.orgInfo}>Contact: {orgContact}</Text>
-                            <Text style={styles.orgInfo}>Email: {orgEmail}</Text>
+                <View>
+                    <View style={styles.headerRow}>
+                        <View style={styles.logoSection}>
+                            {orgLogo && <Image src={orgLogo} style={styles.logo} />}
+                            <View style={styles.orgDetails}>
+                                <Text style={styles.orgName}>{orgName}</Text>
+                                <Text style={styles.orgTagline}>{orgTagline}</Text>
+                            </View>
+                        </View>
+                        <Text style={styles.title}>QUOTATION</Text>
+                    </View>
+                    <View style={styles.headerRow}>
+                        <View style={{ width: '100%' }}>
+                            <View style={styles.infoRow}>
+                                <Text style={styles.labelRight}>CONTACT:</Text>
+                                <Text style={styles.valueRight}>{orgContact}</Text>
+                            </View>
+                            <View style={styles.infoRow}>
+                                <Text style={styles.labelRight}>EMAIL:</Text>
+                                <Text style={styles.valueRight}>{orgEmail}</Text>
+                            </View>
+                            <View style={styles.infoRow}>
+                                <Text style={styles.labelRight}>ADDRESS:</Text>
+                                <Text style={styles.valueRight}>{orgAddress}</Text>
+                            </View>
+                        </View>
+                        <View style={{ width: '100%' }}>
+                            <View style={styles.infoRow}>
+                                <Text style={styles.labelRight}>DATE:</Text>
+                                <Text style={styles.valueRight}>{createdDate}</Text>
+                            </View>
+                            <View style={styles.infoRow}>
+                                <Text style={styles.labelRight}>QUOTE ID:</Text>
+                                <Text style={styles.valueRight}>{displayId}</Text>
+                            </View>
                         </View>
                     </View>
-                    <Text style={styles.title}>QUOTATION</Text>
                 </View>
 
                 <View style={styles.separator} />
 
                 {/* Info Section */}
                 <View style={styles.infoSection}>
-                    <View style={styles.infoBoxLeft}>
-                        <Text style={{ marginBottom: 8, fontWeight: 'bold' }}>CUSTOMER DETAILS:</Text>
-                        <View style={styles.infoRow}>
-                            <Text style={styles.label}>Name:</Text>
-                            <Text style={styles.value}>{customerName}</Text>
-                        </View>
-                        <View style={styles.infoRow}>
-                            <Text style={styles.label}>Email:</Text>
-                            <Text style={styles.value}>{data.customer_email || ''}</Text>
-                        </View>
-                        <View style={styles.infoRow}>
-                            <Text style={styles.label}>Phone:</Text>
-                            <Text style={styles.value}>{data.customer_phone || ''}</Text>
-                        </View>
-                        <View style={styles.infoRow}>
-                            <Text style={styles.label}>Address:</Text>
-                            <Text style={styles.value}>{data.customer_address || ''}</Text>
-                        </View>
+                    {/* <View style={styles.infoBoxLeft}> */}
+                    <Text style={{ fontSize: 14, lineHeight: 1.6, fontWeight: 'bold' }}>CUSTOMER DETAILS:</Text>
+                    <View style={styles.infoRow}>
+                        <Text style={styles.label}>NAME:</Text>
+                        <Text style={styles.value}>{customerName}</Text>
                     </View>
-
-                    <View style={styles.infoBoxRight}>
-                        <View style={styles.infoRow}>
-                            <Text style={styles.labelRight}>DATE:</Text>
-                            <Text style={styles.valueRight}>{createdDate}</Text>
-                        </View>
-                        <View style={styles.infoRow}>
-                            <Text style={styles.labelRight}>QUOTE ID:</Text>
-                            <Text style={styles.valueRight}>{displayId}</Text>
-                        </View>
+                    <View style={styles.infoRow}>
+                        <Text style={styles.label}>EMAIL:</Text>
+                        <Text style={styles.value}>{data.customer_email || ''}</Text>
                     </View>
+                    <View style={styles.infoRow}>
+                        <Text style={styles.label}>PHONE:</Text>
+                        <Text style={styles.value}>{data.customer_phone || ''}</Text>
+                    </View>
+                    <View style={styles.infoRow}>
+                        <Text style={styles.label}>ADDRESS:</Text>
+                        <Text style={styles.value}>{data.customer_address || ''}</Text>
+                    </View>
+                    {/* </View> */}
                 </View>
 
                 <Text style={styles.greeting}>
@@ -271,7 +293,8 @@ export const QuotePDFDocument: React.FC<QuotePDFProps> = ({ quoteData, orgSettin
                             textAlign: align as any,
                             flexBasis: width,
                             flexGrow: key === 'item' ? 2 : 1,
-                            paddingHorizontal: 2
+                            paddingHorizontal: 2,
+                            lineHeight: 1
                         };
                     };
 
@@ -330,7 +353,7 @@ export const QuotePDFDocument: React.FC<QuotePDFProps> = ({ quoteData, orgSettin
                                     // We'll mimic the "colspan" behavior by using a full flex row with content justified to end.
 
                                     return (
-                                        <>
+                                        <View style={{ borderTopWidth: 1, borderTopColor: '#333' }}>
                                             <View style={styles.summaryRow}>
                                                 <View style={{ flex: 1 }}></View>
                                                 <Text style={{ width: '30%', textAlign: 'right', fontWeight: 'bold', paddingRight: 4 }}>SUB TOTAL</Text>
@@ -340,17 +363,17 @@ export const QuotePDFDocument: React.FC<QuotePDFProps> = ({ quoteData, orgSettin
                                                 <>
                                                     <View style={styles.summaryRow}>
                                                         <View style={{ flex: 1 }}></View>
-                                                        <Text style={{ width: '30%', textAlign: 'right', fontWeight: 'bold', paddingRight: 4 }}>Margin Applied ({(margin * 100).toFixed(0)}%)</Text>
+                                                        <Text style={{ width: '30%', textAlign: 'right', fontWeight: 'bold', textTransform: 'uppercase', paddingRight: 4 }}>Margin Applied ({(margin * 100).toFixed(0)}%)</Text>
                                                         <Text style={{ width: '20%', textAlign: 'right', paddingRight: 2 }}>INR {(subtotal * margin).toFixed(2)}</Text>
                                                     </View>
                                                     <View style={styles.summaryRow}>
                                                         <View style={{ flex: 1 }}></View>
-                                                        <Text style={{ width: '30%', textAlign: 'right', fontWeight: 'bold', paddingRight: 4 }}>SECTION TOTAL</Text>
+                                                        <Text style={{ width: '30%', textAlign: 'right', fontWeight: 'bold', textTransform: 'uppercase', paddingRight: 4 }}>SECTION TOTAL</Text>
                                                         <Text style={{ width: '20%', textAlign: 'right', paddingRight: 2 }}>INR {(subtotal * (1 + margin)).toFixed(2)}</Text>
                                                     </View>
                                                 </>
                                             )}
-                                        </>
+                                        </View>
                                     );
                                 })()}
                             </View>

@@ -14,10 +14,11 @@ const SettingsPage = () => {
     const [saving, setSaving] = useState(false);
     const [orgData, setOrgData] = useState({
         name: '',
+        tagline: '',
         logo_url: '',
         contact_number: '',
         email: '',
-        address: ''
+        address: '',
     });
 
     useEffect(() => {
@@ -26,6 +27,7 @@ const SettingsPage = () => {
                 const response = await api.get('/org');
                 setOrgData({
                     name: response.data.name || '',
+                    tagline: response.data.tagline || '',
                     logo_url: response.data.logo_url || '',
                     contact_number: response.data.contact_number || '',
                     email: response.data.email || '',
@@ -89,6 +91,17 @@ const SettingsPage = () => {
                                 value={orgData.name}
                                 onChange={(e) => setOrgData({ ...orgData, name: e.target.value })}
                                 placeholder="e.g. Acme Interiors"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="name" className="flex items-center gap-2">
+                                <Building className="h-4 w-4" /> Organization Tagline
+                            </Label>
+                            <Input
+                                id="tagline"
+                                value={orgData.tagline}
+                                onChange={(e) => setOrgData({ ...orgData, tagline: e.target.value })}
+                                placeholder="e.g. Quotations made effortless"
                             />
                         </div>
                         <div className="space-y-2">

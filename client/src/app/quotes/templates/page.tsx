@@ -67,7 +67,7 @@ const DUMMY_QUOTE = {
             }
         ]
     },
-    display_id: "PREVIEW-001",
+    display_id: "PREVI#04022026230427",
     created_at: new Date().toISOString()
 };
 
