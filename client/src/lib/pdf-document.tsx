@@ -322,31 +322,57 @@ export const QuotePDFDocument: React.FC<QuotePDFProps> = ({ quoteData, orgSettin
                         ];
                     }
 
+                    // Helper to resolve values including aliases
+                    const getValue = (item: any, key: string) => {
+                        if (key === 'quantity' || key === 'qty') return parseFloat(item.quantity || item.qty || 0);
+                        if (key === 'price' || key === 'unit_price') return parseFloat(item.price || item.unit_price || 0);
+                        if (key === 'total') return parseFloat(item.total || 0);
+                        if (key === 'name' || key === 'item') return item.name || item.item || '';
+                        if (key === 'family' || key === 'family_name') return familyName;
+                        if (key === 'unit_type' || key === 'unit') return (item.unit_type || item.unit || '').toUpperCase();
+                        return item.custom_fields?.[key] || item[key] || '';
+                    };
+
+                    const evaluateFormula = (formula: string, item: any) => {
+                        try {
+                            // Simple safe eval using function constructor with restricted scope
+                            const price = parseFloat(item.price || item.unit_price || 0);
+                            const quantity = parseFloat(item.quantity || item.qty || 0);
+                            const total = parseFloat(item.total || 0);
+
+                            // Replace known variables in formula string or setup scope
+                            // We support 'price', 'quantity', 'qty', 'unit_price' in the formula string
+                            const func = new Function('price', 'quantity', 'qty', 'unit_price', 'total', `return ${formula}`);
+                            return func(price, quantity, quantity, price, total);
+                        } catch (e) {
+                            return 0;
+                        }
+                    };
+
                     // Helper to determine widths/alignments
                     const getColStyle = (col: any) => {
                         let align = col.align || 'left';
                         const key = col.key;
-                        if (['qty', 'unit_price', 'total', 'price', 'base_margin', 'sub_total'].includes(key)) {
-                            align = 'right'; // react-pdf uses 'right' not 'end' for textAlign usually (though flex uses flex-end)
+                        if (['qty', 'quantity', 'unit_price', 'price', 'total', 'base_margin', 'sub_total'].includes(key) || col.type === 'number' || col.type === 'formula') {
+                            align = 'right';
                         }
 
                         let width = '15%'; // default
-                        if (key === 'item' || key === 'name' || col.label === 'DESCRIPTION') {
-                            width = '40%';
-                        } else if (key === 'qty') {
-                            width = '15%';
+                        if (key === 'item' || key === 'name' || col.label === 'Item Name' || col.label === 'DESCRIPTION') {
+                            width = '35%';
+                        } else if (key === 'quantity' || key === 'qty' || key === 'unit_type') {
+                            width = '12%';
+                        } else if (key === 'total') {
+                            width = '20%';
                         }
 
-                        // Distribute remaining space? simplified logic:
-                        // If 4 cols: 40 + 20 + 20 + 20
-
-                        // Let's rely on flex if possible, but tables in PDF are harder with flex alone if headers/rows don't align perfectly.
-                        // Setting explicit percentage widths is safer.
+                        // Adjust flexGrow based on importance
+                        const flexGrow = (key === 'name' || key === 'item' || key === 'description') ? 2 : 1;
 
                         return {
                             textAlign: align as any,
                             flexBasis: width,
-                            flexGrow: key === 'item' ? 2 : 1,
+                            flexGrow: flexGrow,
                             paddingHorizontal: 2,
                             lineHeight: 1
                         };
@@ -371,21 +397,32 @@ export const QuotePDFDocument: React.FC<QuotePDFProps> = ({ quoteData, orgSettin
                                     <View key={iIndex} style={styles.tableRow}>
                                         {columns.map((col: any, cIndex: number) => {
                                             const key = col.key;
-                                            let val = '';
-                                            if (key === 'item' || key === 'name') {
-                                                val = item.name || '';
-                                            } else if (key === 'qty') {
-                                                val = `${parseFloat(item.qty || 0).toFixed(2)} ${(item.unit_type || '').toUpperCase()}`;
-                                            } else if (key === 'unit_type' || key === 'unit') {
-                                                val = (item.unit_type || '').toUpperCase();
-                                            } else if (key === 'family' || key === 'family_name') {
-                                                val = familyName;
-                                            } else if (key === 'unit_price' || key === 'price') {
-                                                val = `₹ ${parseFloat(item.unit_price || 0).toFixed(2)}`;
-                                            } else if (key === 'total') {
-                                                val = `₹ ${parseFloat(item.total || 0).toFixed(2)}`;
+                                            let val: any = '';
+
+                                            if (col.type === 'formula' && col.formula) {
+                                                const computed = evaluateFormula(col.formula, item);
+                                                // Format purely based on key if it looks like money? Or just generic number?
+                                                // Usually formulas like total are money.
+                                                // Let's assume generic number formatting for now, unless key is 'total' or 'price'.
+                                                if (key === 'total' || key === 'price' || key.includes('price') || key.includes('amount')) {
+                                                    val = `₹ ${parseFloat(computed).toFixed(2)}`;
+                                                } else {
+                                                    val = parseFloat(computed).toFixed(2);
+                                                }
                                             } else {
-                                                val = item.custom_fields?.[key] || item[key] || '';
+                                                const rawVal = getValue(item, key);
+
+                                                if (key === 'quantity' || key === 'qty') {
+                                                    val = parseFloat(rawVal).toFixed(2);
+                                                    // Only append unit if using legacy 'qty' behavior? 
+                                                    // User separated columns. So strictly number.
+                                                } else if (key === 'price' || key === 'unit_price') {
+                                                    val = `₹ ${parseFloat(rawVal).toFixed(2)}`;
+                                                } else if (key === 'total') {
+                                                    val = `₹ ${parseFloat(rawVal).toFixed(2)}`;
+                                                } else {
+                                                    val = rawVal;
+                                                }
                                             }
 
                                             return (

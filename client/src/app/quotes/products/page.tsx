@@ -114,7 +114,17 @@ const ProductsPage: React.FC = () => {
             ]);
             setProducts(productsResponse);
             setProductFamilies(familiesResponse);
-            setColumns(settingsResponse.map((col: ProductColumn) => ({ ...col, _id: Math.random().toString(36).substr(2, 9) })));
+
+            let fetchedColumns = settingsResponse;
+            if (!fetchedColumns || fetchedColumns.length === 0) {
+                fetchedColumns = [
+                    { key: 'name', label: 'Name', type: 'text', editable: true },
+                    { key: 'price', label: 'Price', type: 'number', editable: true },
+                    { key: 'family', label: 'Family', type: 'text', editable: true } // Visual type 'text', handled as relation in UI
+                ];
+            }
+
+            setColumns(fetchedColumns.map((col: ProductColumn) => ({ ...col, _id: Math.random().toString(36).substr(2, 9) })));
         } catch (err: any) {
             setError(err.message || 'Failed to fetch data.');
         } finally {

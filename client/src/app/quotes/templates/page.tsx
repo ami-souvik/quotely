@@ -4,6 +4,23 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { getProductSettings } from '@/lib/api/products';
 import {
     getPDFTemplates,
@@ -13,7 +30,7 @@ import {
     PDFTemplate
 } from '@/lib/api/quotes';
 import { getOrganization, Organization } from '@/lib/api/organization';
-import { Loader2, GripVertical, Plus, Trash2, FileText } from 'lucide-react';
+import { Loader2, GripVertical, Plus, Trash2, FileText, Settings, Info } from 'lucide-react';
 import {
     DndContext,
     closestCenter,
@@ -52,9 +69,9 @@ const DUMMY_QUOTE = {
                 subtotal: 10000,
                 margin_applied: 0.1,
                 items: [
-                    { name: "Sofa Sectional", qty: 1, unit_price: 5000, total: 5000, unit_type: "pcs" },
-                    { name: "Coffee Table", qty: 1, unit_price: 2000, total: 2000, unit_type: "pcs" },
-                    { name: "Floor Lamp", qty: 2, unit_price: 1500, total: 3000, unit_type: "pcs" }
+                    { name: "Sofa Sectional", quantity: 1, price: 5000, total: 5000, unit_type: "pcs" },
+                    { name: "Coffee Table", quantity: 1, price: 2000, total: 2000, unit_type: "pcs" },
+                    { name: "Floor Lamp", quantity: 2, price: 1500, total: 3000, unit_type: "pcs" }
                 ]
             },
             {
@@ -62,7 +79,7 @@ const DUMMY_QUOTE = {
                 subtotal: 2000,
                 margin_applied: 0,
                 items: [
-                    { name: "Labor", qty: 4, unit_price: 500, total: 2000, unit_type: "hours" }
+                    { name: "Labor", quantity: 4, price: 500, total: 2000, unit_type: "hours" }
                 ]
             },
             {
@@ -70,10 +87,10 @@ const DUMMY_QUOTE = {
                 subtotal: 12000,
                 margin_applied: 0.05,
                 items: [
-                    { name: "Queen Bed Frame", qty: 1, unit_price: 8000, total: 8000, unit_type: "pcs" },
-                    { name: "Bedside Table", qty: 2, unit_price: 2000, total: 4000, unit_type: "pcs" },
-                    { name: "Table Lamp", qty: 2, unit_price: 500, total: 1000, unit_type: "pcs" },
-                    { name: "Wardrobe", qty: 1, unit_price: 15000, total: 15000, unit_type: "pcs" }
+                    { name: "Queen Bed Frame", quantity: 1, price: 8000, total: 8000, unit_type: "pcs" },
+                    { name: "Bedside Table", quantity: 2, price: 2000, total: 4000, unit_type: "pcs" },
+                    { name: "Table Lamp", quantity: 2, price: 500, total: 1000, unit_type: "pcs" },
+                    { name: "Wardrobe", quantity: 1, price: 15000, total: 15000, unit_type: "pcs" }
                 ]
             },
             {
@@ -81,9 +98,9 @@ const DUMMY_QUOTE = {
                 subtotal: 15000,
                 margin_applied: 0.1,
                 items: [
-                    { name: "Ergonomic Chair", qty: 2, unit_price: 4000, total: 8000, unit_type: "pcs" },
-                    { name: "Standing Desk", qty: 1, unit_price: 7000, total: 7000, unit_type: "pcs" },
-                    { name: "Monitor Arm", qty: 2, unit_price: 1500, total: 3000, unit_type: "pcs" }
+                    { name: "Ergonomic Chair", quantity: 2, price: 4000, total: 8000, unit_type: "pcs" },
+                    { name: "Standing Desk", quantity: 1, price: 7000, total: 7000, unit_type: "pcs" },
+                    { name: "Monitor Arm", quantity: 2, price: 1500, total: 3000, unit_type: "pcs" }
                 ]
             },
             {
@@ -91,11 +108,11 @@ const DUMMY_QUOTE = {
                 subtotal: 25000,
                 margin_applied: 0.08,
                 items: [
-                    { name: "Refrigerator", qty: 1, unit_price: 18000, total: 18000, unit_type: "pcs" },
-                    { name: "Microwave Oven", qty: 1, unit_price: 5000, total: 5000, unit_type: "pcs" },
-                    { name: "Dishwasher", qty: 1, unit_price: 12000, total: 12000, unit_type: "pcs" },
-                    { name: "Coffee Maker", qty: 1, unit_price: 3000, total: 3000, unit_type: "pcs" },
-                    { name: "Toaster", qty: 1, unit_price: 1500, total: 1500, unit_type: "pcs" }
+                    { name: "Refrigerator", quantity: 1, price: 18000, total: 18000, unit_type: "pcs" },
+                    { name: "Microwave Oven", quantity: 1, price: 5000, total: 5000, unit_type: "pcs" },
+                    { name: "Dishwasher", quantity: 1, price: 12000, total: 12000, unit_type: "pcs" },
+                    { name: "Coffee Maker", quantity: 1, price: 3000, total: 3000, unit_type: "pcs" },
+                    { name: "Toaster", quantity: 1, price: 1500, total: 1500, unit_type: "pcs" }
                 ]
             }
         ]
@@ -117,6 +134,8 @@ interface ColumnConfig {
     label: string;
     selected: boolean;
     isSystem: boolean;
+    type?: 'text' | 'number' | 'formula';
+    formula?: string;
 }
 
 interface SortableItemProps {
@@ -124,9 +143,10 @@ interface SortableItemProps {
     index: number;
     onToggle: (index: number, checked: boolean) => void;
     onLabelChange: (index: number, label: string) => void;
+    onRemove: (index: number) => void;
 }
 
-function SortableItem({ col, index, onToggle, onLabelChange }: SortableItemProps) {
+function SortableItem({ col, index, onToggle, onLabelChange, onRemove }: SortableItemProps) {
     const {
         attributes,
         listeners,
@@ -151,17 +171,24 @@ function SortableItem({ col, index, onToggle, onLabelChange }: SortableItemProps
                 checked={col.selected}
                 onChange={(e) => onToggle(index, e.target.checked)}
                 className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                disabled={col.isSystem || ['name', 'price', 'family', 'quantity', 'unit_type', 'total'].includes(col.key)} // Core fields always checked? User didn't say always checked, but "show by default". Let's allow unchecking, but maybe warn. Actually user said "REMOVE these...", effectively setting new defaults.
             />
             <div className="flex-1 grid grid-cols-2 gap-2 items-center">
-                <label htmlFor={`col-${col.key}`} className="text-sm font-medium cursor-pointer select-none">
-                    {col.key} <span className="text-xs text-muted-foreground ml-1">({col.isSystem ? 'System' : 'Custom'})</span>
-                </label>
-                <Input
-                    value={col.label}
-                    onChange={(e) => onLabelChange(index, e.target.value)}
-                    className="h-8"
-                    placeholder="Column Label"
-                />
+                <div className="flex flex-col">
+                    <label htmlFor={`col-${col.key}`} className="text-sm font-medium cursor-pointer select-none">
+                        {col.key} <span className="text-xs text-muted-foreground ml-1">({col.type || 'text'})</span>
+                    </label>
+                    {col.type === 'formula' && <span className="text-xs text-muted-foreground italic truncate">{col.formula}</span>}
+                </div>
+                <div className="flex gap-2">
+                    <Input
+                        value={col.label}
+                        onChange={(e) => onLabelChange(index, e.target.value)}
+                        className="h-8 flex-1"
+                        placeholder="Column Label"
+                    />
+                    {/* Allow removing CUSTOM added fields if needed? For now just toggle visibility via checkbox is simpler. */}
+                </div>
             </div>
         </div>
     );
@@ -179,6 +206,10 @@ export default function TemplatesPage() {
     const [creating, setCreating] = useState(false);
     const [newTemplateName, setNewTemplateName] = useState('');
     const [error, setError] = useState<string | null>(null);
+
+    // Dialog State for New Field
+    const [isAddFieldOpen, setIsAddFieldOpen] = useState(false);
+    const [newField, setNewField] = useState({ key: '', label: '', type: 'text', formula: '' });
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -226,12 +257,14 @@ export default function TemplatesPage() {
         if (!newTemplateName.trim()) return;
         setCreating(true);
         try {
-            // Default columns for new template
+            // Default columns for new template (Updated per requirement)
             const defaultCols = [
-                { key: 'item', label: 'DESCRIPTION' },
-                { key: 'qty', label: 'QTY' },
-                { key: 'unit_price', label: 'PRICE' },
-                { key: 'total', label: 'TOTAL' }
+                { key: 'name', label: 'Item Name', type: 'text' },
+                { key: 'price', label: 'Price', type: 'number' },
+                { key: 'family', label: 'Family', type: 'text' },
+                { key: 'quantity', label: 'Quantity', type: 'number' },
+                { key: 'unit_type', label: 'Unit', type: 'text' },
+                { key: 'total', label: 'Total', type: 'formula', formula: 'price * quantity' }
             ];
 
             const newTmpl = await createPDFTemplate({
@@ -267,65 +300,61 @@ export default function TemplatesPage() {
 
     const loadColumnsForTemplate = async (template: PDFTemplate) => {
         try {
-            const productSettings = await getProductSettings().catch(() => []);
-
             // Standard columns always available
             const standardColumns = [
-                { key: 'name', label: 'DESCRIPTION' },
-                { key: 'family', label: 'FAMILY' },
-                { key: 'unit_type', label: 'UNIT' },
-                { key: 'qty', label: 'QTY' },
-                { key: 'price', label: 'PRICE' },
-                { key: 'total', label: 'TOTAL' }
+                { key: 'name', label: 'Item Name', type: 'text' },
+                { key: 'price', label: 'Price', type: 'number' },
+                { key: 'family', label: 'Family', type: 'text' },
+                { key: 'quantity', label: 'Quantity', type: 'number' },
+                { key: 'unit_type', label: 'Unit', type: 'text' },
+                { key: 'total', label: 'Total', type: 'formula', formula: 'price * quantity' }
             ];
 
-            const safeProductSettings = Array.isArray(productSettings) ? productSettings : [];
             const availableMap = new Map();
-
-            // 1. Map available definitions
             standardColumns.forEach(c => {
                 availableMap.set(c.key, { ...c, isSystem: true });
-            });
-            // Handle 'item' vs 'name' legacy mapping
-            availableMap.set('item', { key: 'item', label: 'DESCRIPTION', isSystem: true });
-
-            safeProductSettings.forEach((p: any) => {
-                if (!availableMap.has(p.key)) {
-                    availableMap.set(p.key, { key: p.key, label: p.label, isSystem: false });
-                }
             });
 
             // 2. Build list from template saved columns
             const finalColumns: ColumnConfig[] = [];
             const processedKeys = new Set();
-
             const savedColumns = template.columns || [];
 
-            savedColumns.forEach((col: any) => {
-                // normalize key if needed
-                let key = col.key;
-                const def = availableMap.get(key);
-                // Even if definition missing (deleted field), we show it if it was saved? 
-                // Better to only show if definition exists OR if it's a known system key.
-                if (def || true) {
+            // If template has NO columns (migrated?), default to standard
+            if (savedColumns.length === 0) {
+                standardColumns.forEach(c => {
+                    finalColumns.push({ ...c, selected: true, isSystem: true } as any);
+                    processedKeys.add(c.key);
+                });
+            } else {
+                savedColumns.forEach((col: any) => {
+                    let key = col.key;
+                    // Fix legacy 'item' -> 'name', 'qty' -> 'quantity', 'unit_price' -> 'price' mappings?
+                    // Or if these are "old" templates, they might still have 'item'.
+                    // The user said "Rename pdf template to quote template... check defaults".
+                    // Let's assume we respect what's saved, but we can migrate legacy keys if needed.
+                    // For now, load what is saved.
+
+                    const def = availableMap.get(key);
                     finalColumns.push({
                         key: key,
                         label: col.label,
-                        selected: true,
-                        isSystem: def ? def.isSystem : false
+                        selected: col.selected !== false,
+                        isSystem: def ? true : false,
+                        type: col.type || (def ? def.type : 'text'),
+                        formula: col.formula || (def ? def.formula : '')
                     });
                     processedKeys.add(key);
-                }
-            });
+                });
+            }
 
-            // 3. Append remaining keys (unselected)
+            // 3. Append missing standard keys (unselected)
             availableMap.forEach((def, key) => {
-                if (!processedKeys.has(key) && key !== 'item') { // skip duplicate item/name
+                if (!processedKeys.has(key)) {
                     finalColumns.push({
-                        key: def.key,
-                        label: def.label,
+                        ...def,
                         selected: false,
-                        isSystem: def.isSystem
+                        isSystem: true
                     });
                 }
             });
@@ -342,17 +371,38 @@ export default function TemplatesPage() {
         try {
             const payload = columns.filter(c => c.selected).map(c => ({
                 key: c.key,
-                label: c.label
+                label: c.label,
+                type: c.type,
+                formula: c.formula
             }));
 
             const updated = await updatePDFTemplate(selectedTemplateId, { columns: payload });
-            // Update local state
             setTemplates(templates.map(t => t.id === selectedTemplateId ? updated : t));
         } catch (err: any) {
             alert("Failed to update template");
         } finally {
             setSaving(false);
         }
+    };
+
+    const handleAddField = () => {
+        if (!newField.key || !newField.label) {
+            alert("Key and Label are required");
+            return;
+        }
+
+        const newCol: ColumnConfig = {
+            key: newField.key,
+            label: newField.label,
+            selected: true,
+            isSystem: false,
+            type: newField.type as any,
+            formula: newField.formula
+        };
+
+        setColumns([...columns, newCol]);
+        setIsAddFieldOpen(false);
+        setNewField({ key: '', label: '', type: 'text', formula: '' });
     };
 
     // DND Handlers
@@ -384,9 +434,9 @@ export default function TemplatesPage() {
     return (
         <div className="flex h-[calc(100vh-64px)] overflow-hidden">
             {/* Sidebar: List of Templates */}
-            <div className="w-50 border-r bg-gray-50 flex flex-col">
-                <div className="p-2 border-b">
-                    <h2 className="font-semibold mb-4">PDF Templates</h2>
+            <div className="w-64 border-r bg-gray-50 flex flex-col">
+                <div className="p-4 border-b">
+                    <h2 className="font-semibold mb-4">Quote Templates</h2>
                     <div className="flex gap-2">
                         <Input
                             placeholder="New Template Name"
@@ -420,11 +470,6 @@ export default function TemplatesPage() {
                             </Button>
                         </div>
                     ))}
-                    {templates.length === 0 && !loading && (
-                        <div className="text-center p-8 text-gray-400 text-sm">
-                            No templates found. Create one to get started.
-                        </div>
-                    )}
                 </div>
             </div>
 
@@ -434,17 +479,67 @@ export default function TemplatesPage() {
                     <div className="flex h-full">
                         {/* Editor Column */}
                         <div className="w-[40%] flex flex-col border-r">
-                            <div className="flex-1 overflow-y-auto p-3">
+                            <div className="flex-1 overflow-y-auto p-4">
                                 <div className="space-y-6">
-                                    <div className="flex justify-between items-center">
+                                    <div className="flex justify-between items-start">
                                         <div>
-                                            <h1 className="text-2xl font-bold">{templates.find(t => t.id === selectedTemplateId)?.name} (Columns)</h1>
-                                            <p className="text-gray-500">Configure columns for this PDF template.</p>
-                                            <p className="text-sm text-muted-foreground italic">
-                                                Drag to reorder. Toggle to show/hide.
-                                            </p>
+                                            <h1 className="text-2xl font-bold">{templates.find(t => t.id === selectedTemplateId)?.name}</h1>
+                                            <p className="text-gray-500 text-sm">Configure fields for this quote template.</p>
                                         </div>
+                                        <Dialog open={isAddFieldOpen} onOpenChange={setIsAddFieldOpen}>
+                                            <DialogTrigger asChild>
+                                                <Button size="sm" variant="outline">
+                                                    <Plus className="mr-2 h-4 w-4" /> Add Field
+                                                </Button>
+                                            </DialogTrigger>
+                                            <DialogContent>
+                                                <DialogHeader>
+                                                    <DialogTitle>Add New Field</DialogTitle>
+                                                </DialogHeader>
+                                                <div className="grid gap-4 py-4">
+                                                    <div className="grid grid-cols-4 items-center gap-4">
+                                                        <Label className="text-right">Label</Label>
+                                                        <Input className="col-span-3" value={newField.label} onChange={e => setNewField({ ...newField, label: e.target.value })} />
+                                                    </div>
+                                                    <div className="grid grid-cols-4 items-center gap-4">
+                                                        <Label className="text-right">Key (Auto)</Label>
+                                                        <Input className="col-span-3" value={newField.label.toLowerCase().replace(/\s+/g, '_')} disabled placeholder="Auto-generated" />
+                                                    </div>
+                                                    <div className="grid grid-cols-4 items-center gap-4">
+                                                        <Label className="text-right">Type</Label>
+                                                        <Select value={newField.type} onValueChange={val => setNewField({ ...newField, type: val })}>
+                                                            <SelectTrigger className="col-span-3">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="text">Text</SelectItem>
+                                                                <SelectItem value="number">Number</SelectItem>
+                                                                <SelectItem value="formula">Formula</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                    {newField.type === 'formula' && (
+                                                        <div className="grid grid-cols-4 items-center gap-4">
+                                                            <Label className="text-right">Formula</Label>
+                                                            <Input className="col-span-3" placeholder="e.g. price * quantity" value={newField.formula} onChange={e => setNewField({ ...newField, formula: e.target.value })} />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <DialogFooter>
+                                                    <Button onClick={() => {
+                                                        const key = newField.label.toLowerCase().replace(/\s+/g, '_');
+                                                        if (columns.some(c => c.key === key)) {
+                                                            alert('Field with this key already exists');
+                                                            return;
+                                                        }
+                                                        setNewField({ ...newField, key });
+                                                        handleAddField();
+                                                    }}>Add Field</Button>
+                                                </DialogFooter>
+                                            </DialogContent>
+                                        </Dialog>
                                     </div>
+
                                     <DndContext
                                         sensors={sensors}
                                         collisionDetection={closestCenter}
@@ -462,6 +557,7 @@ export default function TemplatesPage() {
                                                         index={index}
                                                         onToggle={handleToggle}
                                                         onLabelChange={handleLabelChange}
+                                                        onRemove={() => {/* Implement remove if needed */ }}
                                                     />
                                                 ))}
                                             </div>

@@ -50,9 +50,11 @@ const QuoteDetailPage: React.FC = () => {
             setColumns(templateSettings);
           } else {
             setColumns([
-              { key: 'name', label: 'Item' },
-              { key: 'qty', label: 'Qty' },
+              { key: 'name', label: 'Item Name' },
               { key: 'price', label: 'Price' },
+              { key: 'family', label: 'Family' },
+              { key: 'quantity', label: 'Quantity' },
+              { key: 'unit_type', label: 'Unit' },
               { key: 'total', label: 'Total' }
             ]);
           }
@@ -124,10 +126,11 @@ const QuoteDetailPage: React.FC = () => {
 
   const renderCell = (item: any, family: any, colKey: string) => {
     if (colKey === 'name' || colKey === 'item') return item.name;
-    if (colKey === 'qty') return `${item.qty} ${item.unit_type || ''}`;
+    if (colKey === 'quantity') return item.quantity || item.qty || 0;
+    if (colKey === 'qty') return `${item.qty} ${item.unit_type || ''}`; // Legacy fallback
     if (colKey === 'unit_type' || colKey === 'unit') return item.unit_type;
     if (colKey === 'family' || colKey === 'family_name') return family.family_name;
-    if (colKey === 'unit_price' || colKey === 'price') return Number(item.unit_price).toFixed(2);
+    if (colKey === 'unit_price' || colKey === 'price') return Number(item.unit_price || item.price || 0).toFixed(2);
     if (colKey === 'total') return Number(item.total).toFixed(2);
 
     // Custom fields
