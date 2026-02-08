@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Quote, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import LoginForm from '@/components/LoginForm';
 
 const LoginPage: React.FC = () => {
   const auth = useAuth();
@@ -64,15 +65,7 @@ const LoginPage: React.FC = () => {
             </p>
 
             <div className="space-y-4">
-              <Button
-                onClick={() => auth.signinRedirect()}
-                className="w-full h-11 text-base shadow-lg shadow-primary/10 transition-all hover:shadow-primary/20"
-                size="lg"
-              >
-                Login
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-
+              <LoginForm />
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t border-muted" />
@@ -89,10 +82,6 @@ const LoginPage: React.FC = () => {
               </p>
             </div>
           </div>
-
-          <p className="mt-8 text-sm text-muted-foreground">
-            Don&apos;t have an account? <span className="text-primary font-medium">Sign up via Login</span>
-          </p>
         </div>
       </div>
     </div>

@@ -171,7 +171,7 @@ function SortableItem({ col, index, onToggle, onLabelChange, onRemove }: Sortabl
                 checked={col.selected}
                 onChange={(e) => onToggle(index, e.target.checked)}
                 className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                disabled={col.isSystem || ['name', 'price', 'family', 'quantity', 'unit_type', 'total'].includes(col.key)} // Core fields always checked? User didn't say always checked, but "show by default". Let's allow unchecking, but maybe warn. Actually user said "REMOVE these...", effectively setting new defaults.
+                disabled={col.isSystem || ['name', 'price', 'quantity', 'unit_type', 'total'].includes(col.key)} // Core fields always checked? User didn't say always checked, but "show by default". Let's allow unchecking, but maybe warn. Actually user said "REMOVE these...", effectively setting new defaults.
             />
             <div className="flex-1 grid grid-cols-2 gap-2 items-center">
                 <div className="flex flex-col">
