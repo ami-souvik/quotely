@@ -14,17 +14,17 @@ const getFontSrc = (fontFile: string) => {
 };
 
 Font.register({
-    family: 'Inter',
+    family: 'Outfit',
     fonts: [
-        { src: getFontSrc('Inter_28pt-Regular.ttf'), fontWeight: 400 },
-        { src: getFontSrc('Inter_28pt-Bold.ttf'), fontWeight: 700 },
+        { src: getFontSrc('Outfit-Regular.ttf'), fontWeight: 400 },
+        { src: getFontSrc('Outfit-Bold.ttf'), fontWeight: 700 },
     ]
 });
 
 // Styles
 const styles = StyleSheet.create({
     page: {
-        fontFamily: 'Inter', // Updated to Inter
+        fontFamily: 'Outfit', // Updated to Outfit
         fontSize: 10,
         lineHeight: 1.4,
         color: '#333',
@@ -405,7 +405,7 @@ export const QuotePDFDocument: React.FC<QuotePDFProps> = ({ quoteData, orgSettin
                                                 // Usually formulas like total are money.
                                                 // Let's assume generic number formatting for now, unless key is 'total' or 'price'.
                                                 if (key === 'total' || key === 'price' || key.includes('price') || key.includes('amount')) {
-                                                    val = `₹ ${parseFloat(computed).toFixed(2)}`;
+                                                    val = `Rs. ${parseFloat(computed).toFixed(2)}`;
                                                 } else {
                                                     val = parseFloat(computed).toFixed(2);
                                                 }
@@ -417,9 +417,9 @@ export const QuotePDFDocument: React.FC<QuotePDFProps> = ({ quoteData, orgSettin
                                                     // Only append unit if using legacy 'qty' behavior? 
                                                     // User separated columns. So strictly number.
                                                 } else if (key === 'price' || key === 'unit_price') {
-                                                    val = `₹ ${parseFloat(rawVal).toFixed(2)}`;
+                                                    val = `Rs. ${parseFloat(rawVal).toFixed(2)}`;
                                                 } else if (key === 'total') {
-                                                    val = `₹ ${parseFloat(rawVal).toFixed(2)}`;
+                                                    val = `Rs. ${parseFloat(rawVal).toFixed(2)}`;
                                                 } else {
                                                     val = rawVal;
                                                 }
@@ -448,19 +448,19 @@ export const QuotePDFDocument: React.FC<QuotePDFProps> = ({ quoteData, orgSettin
                                             <View style={styles.summaryRow}>
                                                 <View style={{ flex: 1 }}></View>
                                                 <Text style={{ width: '30%', textAlign: 'right', fontWeight: 'bold', paddingRight: 4 }}>SUB TOTAL</Text>
-                                                <Text style={{ width: '20%', textAlign: 'right', paddingRight: 2 }}>₹ {subtotal.toFixed(2)}</Text>
+                                                <Text style={{ width: '20%', textAlign: 'right', paddingRight: 2 }}>Rs. {subtotal.toFixed(2)}</Text>
                                             </View>
                                             {margin > 0 && (
                                                 <>
                                                     <View style={styles.summaryRow}>
                                                         <View style={{ flex: 1 }}></View>
                                                         <Text style={{ width: '30%', textAlign: 'right', fontWeight: 'bold', textTransform: 'uppercase', paddingRight: 4 }}>Margin Applied ({(margin * 100).toFixed(0)}%)</Text>
-                                                        <Text style={{ width: '20%', textAlign: 'right', paddingRight: 2 }}>₹ {(subtotal * margin).toFixed(2)}</Text>
+                                                        <Text style={{ width: '20%', textAlign: 'right', paddingRight: 2 }}>Rs. {(subtotal * margin).toFixed(2)}</Text>
                                                     </View>
                                                     <View style={styles.summaryRow}>
                                                         <View style={{ flex: 1 }}></View>
                                                         <Text style={{ width: '30%', textAlign: 'right', fontWeight: 'bold', textTransform: 'uppercase', paddingRight: 4 }}>SECTION TOTAL</Text>
-                                                        <Text style={{ width: '20%', textAlign: 'right', paddingRight: 2 }}>₹ {(subtotal * (1 + margin)).toFixed(2)}</Text>
+                                                        <Text style={{ width: '20%', textAlign: 'right', paddingRight: 2 }}>Rs. {(subtotal * (1 + margin)).toFixed(2)}</Text>
                                                     </View>
                                                 </>
                                             )}
@@ -473,7 +473,7 @@ export const QuotePDFDocument: React.FC<QuotePDFProps> = ({ quoteData, orgSettin
                 })}
 
                 <Text style={styles.grandTotal}>
-                    GRAND TOTAL: ₹ {totalAmount}
+                    GRAND TOTAL: Rs. {totalAmount}
                 </Text>
 
                 <View fixed style={styles.footer}>

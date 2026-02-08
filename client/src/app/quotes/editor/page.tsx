@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import api, { useAuthStore } from '@/lib/api/client';
+import { useSession } from 'next-auth/react';
+import axios from 'axios';
 import { QuoteFamily, QuoteItem, ProductFamilySerializer, ProductColumn, Customer } from '@/lib/types';
 import { getProductsByFamily, getProductSettings } from '@/lib/api/products';
 import { getQuote, updateQuote, createQuote } from '@/lib/api/quotes';
 import { getProductFamilies } from '@/lib/api/product-families';
 import { getCustomers } from '@/lib/api/customers';
-import { CirclePlus, Loader2, Trash2, Plus, X, Search, User } from 'lucide-react';
+import { CirclePlus, Loader2, Trash2, Plus, X, Search, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
 
@@ -18,7 +19,15 @@ const QuoteEditorContent: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const quoteId = searchParams.get('id');
-  const { user, selectedProductFamilies, setProductFamiliesForQuote } = useAuthStore();
+  const { data: session } = useSession();
+  const user = session?.user;
+
+  // Local state replacement for useAuthStore's selectedProductFamilies
+  // Note: If cross-page persistence was needed, consider Context or URL state. 
+  // Assuming localized usage for now based on patterns.
+  const [selectedProductFamilies, setSelectedProductFamilies] = useState<ProductFamilySerializer[]>([]);
+  const setProductFamiliesForQuote = (families: ProductFamilySerializer[]) => setSelectedProductFamilies(families);
+
   const [quoteFamilies, setQuoteFamilies] = useState<QuoteFamily[]>([]);
 
   // Customer State
@@ -433,7 +442,7 @@ const QuoteEditorContent: React.FC = () => {
                     >
                       <span className="font-medium text-gray-900">{customer.name}</span>
                       <div className="flex gap-3 text-xs text-gray-500 mt-1">
-                        {customer.email && <span className="flex items-center gap-1"><User className="h-3 w-3" /> {customer.email}</span>}
+                        {customer.email && <span className="flex items-center gap-1"><UserIcon className="h-3 w-3" /> {customer.email}</span>}
                         {customer.phone && <span>{customer.phone}</span>}
                       </div>
                     </div>

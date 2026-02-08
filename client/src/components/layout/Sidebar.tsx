@@ -3,13 +3,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Home, Package, FileText, Settings, Users, FileCode } from 'lucide-react';
-import { useAuthStore } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user } = useAuthStore();
+  const { data: session } = useSession();
+  const user = session?.user;
 
   const navItems = [
     { href: '/quotes', icon: Home, label: 'Dashboard' },
@@ -25,7 +26,7 @@ export function Sidebar() {
   return (
     <div className="hidden border-r bg-muted/40 md:block">
       <div className="flex h-full max-h-screen flex-col gap-2">
-        <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
+        <div className="flex h-10 items-center border-b px-4 lg:px-6">
           <Link href="/quotes" className="flex items-center gap-2 font-semibold">
             <Package className="h-6 w-6" />
             <span className="">Quotely</span>

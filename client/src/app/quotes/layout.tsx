@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
-import { useAuthStore } from '@/lib/api/client';
 import { Loader2 } from 'lucide-react';
 
 export default function DashboardLayout({
@@ -12,31 +12,24 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { data: session, status } = useSession();
   const router = useRouter();
-  const { user, isLoading } = useAuthStore();
-  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (isMounted && !isLoading && !user) {
-      router.push('/login');
+    if (status === "unauthenticated") {
+      router.push("/login");
     }
-  }, [isMounted, isLoading, user, router]);
+  }, [status, router]);
 
-  if (!isMounted || isLoading) {
+  if (status === "loading") {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="animate-spin h-8 w-8 text-gray-500" />
+      <div className="flex h-screen w-full items-center justify-center bg-slate-50">
+        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
       </div>
     );
   }
 
-  if (!user) {
-    return null; // Will redirect via useEffect
-  }
+  if (!session) return null;
 
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr]">

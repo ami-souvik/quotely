@@ -25,13 +25,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { getQuotes, deleteQuote, Quote, generatePdf, getPresignedUrl, getPDFTemplates, PDFTemplate } from '@/lib/api/quotes';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import axios from 'axios';
 
 const AllQuotesPage: React.FC = () => {
   const router = useRouter();
@@ -52,9 +46,11 @@ const AllQuotesPage: React.FC = () => {
   const fetchQuotes = async () => {
     try {
       setLoading(true);
-      const data = await getQuotes();
-      setQuotes(data);
-      setFilteredQuotes(data);
+      await axios.get('/api/quotes/all/')
+        .then(res => {
+          setQuotes(res.data || [])
+          setFilteredQuotes(res.data || [])
+        })
     } catch (err: any) {
       setError(err.message || 'Failed to fetch quotes.');
     } finally {

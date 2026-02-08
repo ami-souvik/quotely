@@ -19,8 +19,8 @@ export const metadata: Metadata = {
   description: "Quotely - Quote Management System",
 };
 
-import CognitoAuthProvider from "@/components/CognitoAuthProvider";
 import { Toaster } from "sonner";
+import AuthContext from "@/context/AuthContext";
 
 export default function RootLayout({
   children,
@@ -32,8 +32,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <CognitoAuthProvider>{children}</CognitoAuthProvider>
-        <Toaster position="top-right" richColors />
+        <AuthContext>
+          <Toaster position="top-center" richColors />
+          {children}
+        </AuthContext>
       </body>
     </html>
   );

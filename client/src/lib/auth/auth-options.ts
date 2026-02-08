@@ -4,6 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import CognitoProvider from "next-auth/providers/cognito";
 import { CognitoIdentityProviderClient, InitiateAuthCommand, RespondToAuthChallengeCommand, GetUserCommand } from "@aws-sdk/client-cognito-identity-provider";
 import crypto from 'crypto';
+import { services } from "@/lib/services";
 
 function calculateSecretHash(username: string, clientId: string, clientSecret: string) {
     return crypto.createHmac('sha256', clientSecret)
@@ -29,18 +30,22 @@ export const authOptions: NextAuthOptions = {
                     name: name || constructedName || profile.email, 
                     email: profile.email,
                     image: profile.picture,
+                    org_id: profile["custom:org_id"],
+                    org_name: profile["custom:org_name"],
+                    role: profile["custom:role"],
+                    username: profile["username"] || profile["preferred_username"] || profile.email,
                 }
             },
         }),
         CredentialsProvider({
             name: "Cognito",
             credentials: {
-                email: { label: "Email", type: "email" },
+                username: { label: "Username", type: "username" },
                 password: { label: "Password", type: "password" }
             },
             async authorize(credentials) {
                 const creds = credentials as Record<string, string>;
-                const username = creds?.email || creds?.username; // This will now hold the email
+                const username = creds?.username;
                 const password = creds?.password;
 
                 if (!username || !password) {
@@ -78,16 +83,44 @@ export const authOptions: NextAuthOptions = {
 
                     const response = await client.send(command);
 
-                    // Helper to get user attributes
-                    const getUserAttributes = async (accessToken: string) => {
+                    // Helper to get user attributes and resolve org
+                    const resolveUser = async (accessToken: string) => {
                         try {
                             const getUserCmd = new GetUserCommand({ AccessToken: accessToken });
                             const userRes = await client.send(getUserCmd);
                             const attrs = userRes.UserAttributes || [];
-                            const name = attrs.find(a => a.Name === 'name')?.Value;
-                            const given = attrs.find(a => a.Name === 'given_name')?.Value;
-                            const family = attrs.find(a => a.Name === 'family_name')?.Value;
-                            return name || (given ? `${given} ${family || ''}`.trim() : null);
+                            
+                            const name = attrs.find((a: any) => a.Name === 'name')?.Value;
+                            const given = attrs.find((a: any) => a.Name === 'given_name')?.Value;
+                            const family = attrs.find((a: any) => a.Name === 'family_name')?.Value;
+                            let orgId = attrs.find((a: any) => a.Name === 'custom:org_id')?.Value;
+                            const orgName = attrs.find((a: any) => a.Name === 'custom:org_name')?.Value;
+                            const role = attrs.find((a: any) => a.Name === 'custom:role')?.Value;
+
+                            // Resolve Org ID if missing but Org Name exists
+                            if (!orgId && orgName) {
+                                try {
+                                    const resolvedId = await services.getOrganizationIdByName(orgName);
+                                    if (resolvedId) {
+                                        orgId = resolvedId;
+                                    } else {
+                                        const createdId = await services.createOrganization(orgName);
+                                        if (createdId) orgId = createdId;
+                                    }
+                                } catch (e) {
+                                    console.error("Org resolution failed during login:", e);
+                                }
+                            }
+
+                            return {
+                                id: username, // Fallback ID, should ideally be sub from attrs but username works for keying
+                                name: name || (given ? `${given} ${family || ''}`.trim() : null) || username.split('@')[0],
+                                email: username,
+                                org_id: orgId,
+                                org_name: orgName,
+                                role: role,
+                                accessToken: accessToken,
+                            };
                         } catch (err) {
                             console.error("Failed to fetch user attributes:", err);
                             return null;
@@ -109,28 +142,12 @@ export const authOptions: NextAuthOptions = {
                         const challengeResponse = await client.send(challengeCommand);
 
                         if (challengeResponse.AuthenticationResult?.AccessToken) {
-                            const accessToken = challengeResponse.AuthenticationResult.AccessToken;
-                            const fullName = await getUserAttributes(accessToken);
-
-                            return {
-                                id: username,
-                                email: username,
-                                name: fullName || username.split('@')[0], 
-                                accessToken: accessToken, 
-                            }
+                            return await resolveUser(challengeResponse.AuthenticationResult.AccessToken);
                         }
                     }
 
                     if (response.AuthenticationResult?.AccessToken) {
-                         const accessToken = response.AuthenticationResult.AccessToken;
-                         const fullName = await getUserAttributes(accessToken);
-
-                         return {
-                            id: username, 
-                            email: username,
-                            name: fullName || username.split('@')[0], 
-                            accessToken: accessToken, 
-                         }
+                         return await resolveUser(response.AuthenticationResult.AccessToken);
                     }
                     console.warn("Cognito Login successful but no AuthenticationResult. ChallengeName:", response.ChallengeName);
                     return null;
@@ -154,18 +171,30 @@ export const authOptions: NextAuthOptions = {
         maxAge: 30 * 24 * 60 * 60, // 30 days
     },
     callbacks: {
-        async jwt({ token, user }) {
+        async jwt({ token, user, account }) {
+            // Initial sign in
             if (user) {
                 token.id = user.id;
                 token.name = user.name;
                 token.email = user.email;
+                token.org_id = user.org_id;
+                token.org_name = user.org_name;
+                token.role = user.role;
             }
             return token;
         },
         async session({ session, token }) {
             if (session.user) {
+                // @ts-ignore
+                session.user.id = token.id as string;
                 session.user.name = token.name;
                 session.user.email = token.email;
+                // @ts-ignore
+                session.user.org_id = token.org_id as string;
+                // @ts-ignore
+                session.user.org_name = token.org_name as string;
+                // @ts-ignore
+                session.user.role = token.role as string;
             }
             return session;
         }

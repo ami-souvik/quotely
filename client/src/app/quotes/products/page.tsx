@@ -49,7 +49,7 @@ import {
     deleteProductFamily
 } from '@/lib/api/product-families';
 import { Product, ProductFamilySerializer, ProductColumn } from '@/lib/types';
-import { useAuthStore } from '@/lib/api/client';
+import { useSession } from 'next-auth/react';
 import { GripVertical, Plus, Trash2, Settings, Edit, FolderOpen, Info } from 'lucide-react';
 
 const evaluateFormula = (formula: string, product: Product, columns: ProductColumn[], families: ProductFamilySerializer[]) => {
@@ -82,7 +82,8 @@ const evaluateFormula = (formula: string, product: Product, columns: ProductColu
 type UIProductColumn = ProductColumn & { _id: string };
 
 const ProductsPage: React.FC = () => {
-    const { user } = useAuthStore();
+    const { data: session } = useSession();
+    const user = session?.user;
     const [activeTab, setActiveTab] = useState<'products' | 'families'>('products');
 
     // Data States

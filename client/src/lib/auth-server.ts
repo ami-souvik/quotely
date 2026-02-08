@@ -1,5 +1,7 @@
 import { CognitoJwtVerifier } from "aws-jwt-verify";
 import { services } from "@/lib/services";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/auth-options";
 
 // Initialize Verifier
 // Note: Ensure COGNITO_USER_POOL_ID and COGNITO_CLIENT_ID are set in environment variables
@@ -37,6 +39,30 @@ export interface AuthUser {
 }
 
 export async function authenticate(request: Request): Promise<AuthUser | null> {
+  // 1. Try NextAuth Session first (for App Router API routes)
+  try {
+      const session = await getServerSession(authOptions);
+      if (session) {
+        // console.log("DEBUG: check session", JSON.stringify(session, null, 2));
+      }
+      if (session && session.user && session.user.org_id) {
+          return {
+              id: session.user.id,
+              username: session.user.email || session.user.id,
+              email: session.user.email || "",
+              role: (session.user.role as 'ADMIN' | 'EMPLOYEE') || 'EMPLOYEE',
+              org_id: session.user.org_id,
+              org_name: session.user.org_name || ""
+          };
+      } else if (session?.user) {
+          console.warn("Session exists but missing org_id. User might need to re-login.", session.user);
+      }
+  } catch (e) {
+      console.error("Failed to retrieve session in authenticate:", e);
+      // Fallback to token
+  }
+
+  // 2. Fallback to Bearer Token (Cognito Direct)
   const authHeader = request.headers.get("authorization");
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return null;

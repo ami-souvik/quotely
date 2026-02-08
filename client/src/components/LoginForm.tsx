@@ -12,10 +12,10 @@ import { Label } from "@/components/ui/label";
 export default function LoginForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const callbackUrl = searchParams.get('callbackUrl') || '/app';
+    const callbackUrl = searchParams.get('callbackUrl') || '/quotes';
 
     const [isLoading, setIsLoading] = useState(false);
-    const [email, setEmail] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -24,7 +24,7 @@ export default function LoginForm() {
 
         try {
             const res = await signIn('credentials', {
-                email, // Matching the 'email' field in authOptions credentials setup, though logic handles username too
+                username, // Matching the 'username' field in authOptions credentials setup, though logic handles username too
                 password,
                 redirect: false,
                 callbackUrl,
@@ -49,18 +49,18 @@ export default function LoginForm() {
     return (
         <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-2">
-                <Label htmlFor="email">Email or Username</Label>
+                <Label htmlFor="username">Username</Label>
                 <div className="relative">
                     <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
-                        id="email"
+                        id="username"
                         type="text"
-                        placeholder="name@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="e.g. johndoe"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
                         className="pl-9"
                         required
-                        autoComplete="email"
+                        autoComplete="username"
                         disabled={isLoading}
                     />
                 </div>

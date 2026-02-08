@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Loader2, Save, Building, Phone, Mail, Globe, Image as ImageIcon } from 'lucide-react';
-import api from '@/lib/api/client';
+import axios from 'axios';
 import { toast } from 'sonner';
 
 const SettingsPage = () => {
@@ -24,7 +24,7 @@ const SettingsPage = () => {
     useEffect(() => {
         const fetchOrg = async () => {
             try {
-                const response = await api.get('/org');
+                const response = await axios.get('/api/org');
                 setOrgData({
                     name: response.data.name || '',
                     tagline: response.data.tagline || '',
@@ -46,7 +46,7 @@ const SettingsPage = () => {
     const handleSave = async () => {
         setSaving(true);
         try {
-            await api.put('/org', orgData);
+            await axios.put('/api/org', orgData);
             toast.success('Settings updated successfully');
         } catch (error) {
             console.error('Failed to update org settings:', error);

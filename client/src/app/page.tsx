@@ -1,41 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/lib/api/client';
-import { useAuth } from "react-oidc-context";
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Quote, Zap, Smartphone, CheckCircle, ArrowRight } from 'lucide-react';
 
 export default function Home() {
     const router = useRouter();
-    const { user, isLoading: isStoreLoading } = useAuthStore();
-    const auth = useAuth();
-    const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+    const { status } = useSession();
 
     useEffect(() => {
-        // If OIDC is processing (e.g. code exchange), wait.
-        if (auth.isLoading) return;
-
-        // If OIDC is authenticated, ensure store is synced and redirect
-        if (auth.isAuthenticated) {
+        if (status === 'authenticated') {
             router.replace('/quotes');
-            return;
         }
+    }, [status, router]);
 
-        // Fallback to store check (for persistence across reloads if OIDC state matches)
-        if (!isStoreLoading) {
-            if (user) {
-                router.replace('/quotes');
-            } else {
-                // If not authenticated, show the landing page
-                setIsCheckingAuth(false);
-            }
-        }
-    }, [user, isStoreLoading, auth.isLoading, auth.isAuthenticated, auth.user, router]);
-
-    if (isCheckingAuth) {
+    if (status === 'loading') {
         return (
             <div className="flex h-screen items-center justify-center bg-background">
                 <div className="flex items-center space-x-2">

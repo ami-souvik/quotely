@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import api, { useAuthStore } from '@/lib/api/client';
+import { useSession } from 'next-auth/react';
+import axios from 'axios';
 import { getProductFamilies } from '@/lib/api/product-families';
 import { ProductFamilySerializer, Product } from '@/lib/types';
 import { Plus, Package, FolderOpen, Settings, Trash2 } from 'lucide-react';
@@ -12,7 +13,6 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getProductsByFamily } from '@/lib/api/products';
 import { deleteQuote } from '@/lib/api/quotes';
-import { useAuth } from 'react-oidc-context';
 
 // Interfaces
 interface Quote {
@@ -70,8 +70,8 @@ const ProductListPreview: React.FC<{ family: ProductFamilySerializer }> = ({ fam
 
 
 const DashboardPage: React.FC = () => {
-  const auth = useAuth();
-  const { user } = useAuthStore();
+  const { data: session } = useSession();
+  const user = session?.user;
   const router = useRouter();
 
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -80,27 +80,27 @@ const DashboardPage: React.FC = () => {
   const [expandedFamilies, setExpandedFamilies] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (user) {
-      const fetchData = async () => {
-        try {
-          setLoading(true);
-          const [quotesRes, familiesRes] = await Promise.all([
-            api.get('/quotes/all/'),
-            // Only fetch families if admin, though preview is nice for everyone? 
-            // The prompt implies dashboard preview of families.
-            user.role === 'ADMIN' ? getProductFamilies() : Promise.resolve([])
-          ]);
-          setQuotes(quotesRes.data);
-          setFamilies(familiesRes);
-        } catch (err) {
-          console.error("Failed to fetch data", err);
-        } finally {
-          setLoading(false);
-        }
-      };
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [quotesRes, familiesRes] = await Promise.all([
+          axios.get('/api/quotes/all/'),
+          // Only fetch families if admin, though preview is nice for everyone? 
+          // The prompt implies dashboard preview of families.
+          user?.role === 'ADMIN' ? getProductFamilies() : Promise.resolve([])
+        ]);
+        setQuotes(quotesRes.data);
+        setFamilies(familiesRes);
+      } catch (err) {
+        console.error("Failed to fetch data", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (session) {
       fetchData();
     }
-  }, [user]);
+  }, [session, user?.role]);
 
   const toggleFamilyProducts = (familyId: string) => {
     setExpandedFamilies(prev => {

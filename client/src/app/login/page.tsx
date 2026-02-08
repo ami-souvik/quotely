@@ -1,43 +1,27 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { useAuth } from "react-oidc-context";
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Quote, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { Quote, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import LoginForm from '@/components/LoginForm';
 
 const LoginPage: React.FC = () => {
-  const auth = useAuth();
+  const { data: session, status } = useSession();
   const router = useRouter();
 
   useEffect(() => {
-    if (auth.isAuthenticated && auth.user) {
+    if (status === 'authenticated') {
       router.push('/quotes');
     }
-  }, [auth.isAuthenticated, auth.user, router]);
+  }, [status, router]);
 
-  if (auth.isLoading) {
+  if (status === "loading") {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="flex items-center space-x-2">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"></div>
-          <p className="text-muted-foreground font-medium">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (auth.error) {
-    return (
-      <div className="flex h-screen flex-col items-center justify-center space-y-4 bg-background text-center">
-        <div className="rounded-full bg-destructive/10 p-3 text-destructive">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-alert-circle"><circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" /></svg>
-        </div>
-        <h3 className="text-lg font-semibold">Authentication Error</h3>
-        <p className="text-muted-foreground">{auth.error.message}</p>
-        <Button onClick={() => window.location.reload()} variant="outline">Try Again</Button>
+      <div className="flex h-screen w-full items-center justify-center bg-slate-50">
+        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
       </div>
     );
   }

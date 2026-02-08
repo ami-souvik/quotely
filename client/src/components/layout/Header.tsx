@@ -5,8 +5,9 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { CircleUser, Menu, Package, Search, LogOut, Sun, Moon, Home, FileText } from 'lucide-react';
+import { CircleUser, Menu, Package, LogOut, Sun, Moon, Home, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useSession } from 'next-auth/react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,15 +20,14 @@ import {
   DropdownMenuSubContent,
   DropdownMenuPortal,
 } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { useAuthStore } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
+import { signOut } from 'next-auth/react';
 
 export function Header() {
   const pathname = usePathname();
-  const { user, logout } = useAuthStore();
-  const router = useRouter();
+  const { data: session } = useSession();
+  const user = session?.user;
   const { setTheme } = useTheme();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
@@ -36,13 +36,8 @@ export function Header() {
     { href: '/quotes/all', icon: FileText, label: 'All Quotes' },
   ];
 
-  const handleLogout = () => {
-    logout();
-    router.push('/login');
-  };
-
   return (
-    <header className="flex h-14 justify-end items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
+    <header className="flex h-10 justify-end items-center gap-4 border-b bg-muted/40 px-4 lg:px-6">
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetTrigger asChild>
           <Button variant="outline" size="icon" className="shrink-0 md:hidden">
@@ -106,7 +101,7 @@ export function Header() {
             </DropdownMenuPortal>
           </DropdownMenuSub>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleLogout}>
+          <DropdownMenuItem onClick={() => signOut()}>
             <LogOut className="mr-2 h-4 w-4" />
             <span>Logout</span>
           </DropdownMenuItem>
