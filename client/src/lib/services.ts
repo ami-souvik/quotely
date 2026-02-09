@@ -645,18 +645,18 @@ export class QuotelyService {
 
   async getProductsByFamily(orgId: string, familyId: string): Promise<any[]> {
       try {
+          // Fallback to querying main table and filtering, to bypass potential GSI issues
           const response = await db.send(new QueryCommand({
               TableName: this.tableName,
-              IndexName: 'Family-Product-Index',
-              KeyConditionExpression: 'GSI2PK = :gsi_pk AND begins_with(GSI2SK, :gsi_sk)',
-              FilterExpression: 'PK = :pk',
+              KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk)',
               ExpressionAttributeValues: {
-                  ':gsi_pk': `FAMILY#${familyId}`,
-                  ':gsi_sk': 'PRODUCT#',
-                  ':pk': `ORG#${orgId}`
+                  ':pk': `ORG#${orgId}`,
+                  ':sk': 'PRODUCT#'
               }
           }));
-          return (response.Items || []).map(item => ({ ...item, id: item.SK.split('#')[1] }));
+          
+          const alProducts = (response.Items || []).map(item => ({ ...item, id: item.SK.split('#')[1] }));
+          return alProducts.filter((p: any) => p.family_id === familyId);
       } catch (e) {
           console.error("Error fetching products by family:", e);
           return [];
