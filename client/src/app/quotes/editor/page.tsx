@@ -209,22 +209,89 @@ const QuoteEditorContent: React.FC = () => {
     fetchFamiliesAndProducts();
   }, []);
 
+  const recalculateItem = (item: any) => {
+    const newItem = { ...item };
+
+    // Sort columns? Formulas should ideally come last or be ordered by dependency.
+    // We assume formulas depend on inputs (numbers/text), not other formulas for now, or order suffices.
+
+    activeTemplateColumns.forEach(col => {
+      if (col.type === 'formula' && col.formula) {
+        try {
+          // Create a function that takes the item properties as arguments
+          const keys = activeTemplateColumns.map(c => c.key);
+          // Also include standard keys if not in columns (like 'id')
+
+          // We'll pass the entries of `newItem` that match defined columns + standard fallbacks
+          const argNames = keys;
+          const argValues = keys.map(k => {
+            const val = newItem[k];
+            return (val === undefined || val === null || val === '') ? 0 : Number(val);
+          });
+
+          // Safety: only allow basic math? 
+          // Function constructor is powerful. 
+          const func = new Function(...argNames, `try { return ${col.formula}; } catch(e) { return 0; }`);
+          const result = func(...argValues);
+
+          if (typeof result === 'number' && !isNaN(result)) {
+            newItem[col.key] = result;
+          }
+        } catch (e) {
+          // console.warn("Formula eval error", e);
+        }
+      }
+    });
+    return newItem;
+  };
+
   const addFamiliesToQuote = async (families: ProductFamilySerializer[]) => {
     const familiesWithProducts = await Promise.all(
       families.map(async (family) => {
         const products = await getProductsByFamily(family);
-        const items: QuoteItem[] = products.map(product => ({
-          id: product.id,
-          name: product.name,
-          qty: 1,
-          unit_price: product.price,
-          unit_type: 'unit',
-          total: product.price,
-          // Spread custom fields
-          ...product.custom_fields
-        }));
+        const items: QuoteItem[] = products.map(product => {
+          const baseItem: any = {
+            id: product.id || String(Math.random()),
+            name: product.name,
+            // Default legacy fields to ensure compatibility
+            qty: 1,
+            unit_price: product.price || 0,
+            unit_type: 'unit',
+            total: 0,
+          };
 
-        const subtotal = items.reduce((acc, item) => acc + (item.qty * item.unit_price), 0);
+          // Map dynamic columns
+          activeTemplateColumns.forEach(col => {
+            // Value priority: Product Prop -> Custom Field -> Default
+            let val = product[col.key];
+            if (val === undefined && product.custom_fields) {
+              val = product.custom_fields[col.key];
+            }
+
+            // Mappings for standard fields if keys differ (e.g. quantity vs qty)
+            if (val === undefined) {
+              if (col.key === 'quantity') val = 1;
+              if (col.key === 'price') val = product.price;
+            }
+
+            if (val === undefined) {
+              val = col.type === 'number' ? 0 : '';
+            }
+
+            baseItem[col.key] = val;
+          });
+
+          // Recalculate based on formulas
+          return recalculateItem(baseItem);
+        });
+
+        // Sum subtotal from item 'total' column if available, else usage manual calc
+        // We look for a column strictly named 'total' or fallback to a sum
+        const totalCol = activeTemplateColumns.find(c => c.key === 'total');
+        const subtotal = items.reduce((acc, item: any) => {
+          const t = item['total'] !== undefined ? item['total'] : (item.qty * item.unit_price);
+          return acc + (Number(t) || 0);
+        }, 0);
 
         return {
           family_id: family.id,
@@ -241,11 +308,10 @@ const QuoteEditorContent: React.FC = () => {
   };
 
   const calculateFamilySubtotal = useCallback((family: QuoteFamily) => {
-    let subtotal = 0;
-    family.items.forEach(item => {
-      subtotal += item.qty * item.unit_price;
-    });
-    return subtotal;
+    return family.items.reduce((acc, item) => {
+      const t = (item as any).total;
+      return acc + (Number(t) || 0);
+    }, 0);
   }, []);
 
   const calculateGrandTotal = useCallback(() => {
@@ -272,12 +338,11 @@ const QuoteEditorContent: React.FC = () => {
       prevFamilies.map((family, fIdx) => {
         if (fIdx !== familyIndex) return family;
         const newItems = [...family.items];
-        // Handle nested or direct property
-        const newItem = { ...newItems[itemIndex], [field]: value };
-        // Recalculate total if qty or unit_price changes
-        if (field === 'qty' || field === 'unit_price') {
-          newItem.total = (newItem.qty || 0) * (newItem.unit_price || 0);
-        }
+        let newItem = { ...newItems[itemIndex], [field]: value };
+
+        // Recalculate dependent fields (formulas)
+        newItem = recalculateItem(newItem);
+
         newItems[itemIndex] = newItem;
         return { ...family, items: newItems };
       })
