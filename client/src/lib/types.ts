@@ -90,7 +90,7 @@ export interface MasterItem {
     unit_type: string;
 }
 
-export interface PDFTemplate {
+export interface Template {
     id: string;
     name: string;
     columns: any[];

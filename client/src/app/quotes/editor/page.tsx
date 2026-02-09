@@ -9,7 +9,7 @@ import { getProductsByFamily, getProductSettings } from '@/lib/api/products';
 import { getQuote, updateQuote, createQuote } from '@/lib/api/quotes';
 import { getProductFamilies } from '@/lib/api/product-families';
 import { getCustomers } from '@/lib/api/customers';
-import { CirclePlus, Loader2, Trash2, Plus, X, Search, User as UserIcon } from 'lucide-react';
+import { CirclePlus, Loader2, Trash2, Plus, X, Search, User as UserIcon, AtSign, Phone, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
 
@@ -394,7 +394,7 @@ const QuoteEditorContent: React.FC = () => {
 
   return (
     <div className="min-h-screen">
-      <div className='flex justify-between items-center mb-6'>
+      <div className='flex justify-between items-center mb-4'>
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{quoteId ? 'Edit Quote' : 'New Quote'}</h1>
         <div className='flex gap-2'>
           <Button onClick={handleOpenAddFamily} variant="outline">
@@ -409,13 +409,13 @@ const QuoteEditorContent: React.FC = () => {
 
       {error && <div className="text-red-500 text-center mb-4">{error}</div>}
 
-      <div>
-        <div className="mb-6 bg-white p-4 rounded-lg border shadow-sm relative">
+      <div className='space-y-6'>
+        <div className="bg-white p-4 rounded-lg border shadow-sm relative">
           <label htmlFor="customerName" className="block text-gray-700 text-sm font-bold mb-2">
             Customer Name:
           </label>
           <div className="relative">
-            <div className="flex items-center border rounded shadow-sm focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+            <div className="flex items-center border rounded focus-within:ring-2 focus-within:ring-blue-500 bg-white">
               <Search className="ml-2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
@@ -452,31 +452,24 @@ const QuoteEditorContent: React.FC = () => {
                 )}
               </div>
             )}
-
-            {(customerEmail || customerPhone || customerAddress) && (
-              <div className="mt-2 text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1 bg-gray-50 p-2 rounded border border-gray-100">
-                {customerEmail && <span className="font-medium">📧 {customerEmail}</span>}
-                {customerPhone && <span className="font-medium">📱 {customerPhone}</span>}
-                {customerAddress && <span className="font-medium font-sans">🏠 {customerAddress}</span>}
-              </div>
-            )}
           </div>
         </div>
 
-        <div className="mb-6 bg-white p-4 rounded-lg border shadow-sm">
-          <label htmlFor="displayId" className="block text-gray-700 text-sm font-bold mb-2">
+        <div className='grid grid-cols-2 gap-x-4 gap-y-2'>
+          <label htmlFor="displayId" className="block text-gray-700 text-sm font-bold">
             Quotation ID:
           </label>
-          <input
-            disabled
-            type="text"
-            id="displayId"
-            className="w-full border rounded shadow-sm py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={displayId}
-            onChange={(e) => setDisplayId(e.target.value)}
-            placeholder="Auto-generated based on customer name..."
-          />
-          <p className="text-[10px] text-muted-foreground mt-1">Format: FirstLetter+First4LettersOfLastname#DD-MM-YYYY-hh-mm-ss</p>
+          <label htmlFor="displayId" className="block text-gray-700 text-sm font-bold">
+            Customer Details:
+          </label>
+          <p className='w-full text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500'>{displayId}</p>
+          {(customerEmail || customerPhone || customerAddress) && (
+            <div className="text-xs text-gray-500 space-y-2 bg-gray-50">
+              {customerEmail && <span className="flex font-medium"><AtSign className='w-4 h-4 mr-2' /> {customerEmail}</span>}
+              {customerPhone && <span className="flex font-medium"><Phone className='w-4 h-4 mr-2' /> {customerPhone}</span>}
+              {customerAddress && <span className="flex font-medium font-sans"><Home className='w-4 h-4 mr-2' /> {customerAddress}</span>}
+            </div>
+          )}
         </div>
 
         {quoteFamilies.length === 0 && (
@@ -488,121 +481,120 @@ const QuoteEditorContent: React.FC = () => {
           </div>
         )}
 
-        {quoteFamilies.map((family, familyIndex) => (
-          <div key={`${family.family_id}-${familyIndex}`} className="border rounded-lg bg-white mb-6 shadow-sm overflow-hidden">
-            <div className="flex justify-between items-center p-4 bg-gray-50 border-b">
-              <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-                <span className='w-2 h-8 bg-blue-500 rounded-full inline-block'></span>
-                {family.family_name}
-                <span className='text-sm font-normal text-muted-foreground'>({family.category})</span>
-              </h2>
-              <div className='flex gap-2'>
-                <Button variant="outline" size="sm" onClick={() => handleAddItem(familyIndex)} className="text-green-600 border-green-200 hover:bg-green-50">
-                  <CirclePlus className="mr-2 h-4 w-4" /> Add Item
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => handleRemoveFamily(familyIndex)} className="text-red-500 hover:text-red-700 hover:bg-red-50">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+        <div className="bg-white rounded-md border overflow-hidden">
+          {quoteFamilies.map((family, familyIndex) => (
+            <div key={`${family.family_id}-${familyIndex}`}>
+              <div className="flex justify-between items-center p-2 border-b">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-800">
+                    {family.family_name}
+                  </h2>
+                  <span className="text-xs font-medium text-gray-500">Subtotal: {family.subtotal.toFixed(2)}</span>
+                </div>
+                <div className='flex gap-2'>
+                  <Button variant="outline" size="sm" onClick={() => handleAddItem(familyIndex)} className="text-green-600 border-green-200 hover:bg-green-50">
+                    <CirclePlus className="mr-2 h-4 w-4" /> Add Item
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleRemoveFamily(familyIndex)} className="text-red-500 hover:text-red-700 hover:bg-red-50">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
 
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-100/50">
-                  <tr>
-                    <th scope="col" className="p-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[200px]">Item</th>
-                    {customColumns.map(col => (
-                      <th key={col.key} scope="col" className="p-3 text-left text-xs font-medium text-gray-500 uppercase min-w-[120px]">{col.label}</th>
-                    ))}
-                    <th scope="col" className="p-3 text-left text-xs font-medium text-gray-500 uppercase w-[100px]">Qty</th>
-                    <th scope="col" className="p-3 text-left text-xs font-medium text-gray-500 uppercase w-[120px]">Price</th>
-                    <th scope="col" className="p-3 text-left text-xs font-medium text-gray-500 uppercase w-[100px]">Unit</th>
-                    <th scope="col" className="p-3 text-right text-xs font-medium text-gray-500 uppercase w-[120px]">Total</th>
-                    <th scope="col" className="p-3 w-[50px]"></th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {family.items.map((item, itemIndex) => (
-                    <tr key={item.id} className='hover:bg-slate-50 group'>
-                      <td className="p-2">
-                        <input
-                          type="text"
-                          className="w-full border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow"
-                          value={item.name}
-                          onChange={(e) => handleItemChange(familyIndex, itemIndex, 'name', e.target.value)}
-                        />
-                      </td>
-
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead>
+                    <tr>
+                      <th scope="col" className="h-8 px-2 text-left text-xs font-medium text-gray-500 uppercase min-w-[200px]">Item</th>
                       {customColumns.map(col => (
-                        <td key={col.key} className="p-2">
+                        <th key={col.key} scope="col" className="h-8 px-2 text-left text-xs font-medium text-gray-500 uppercase min-w-[120px]">{col.label}</th>
+                      ))}
+                      <th scope="col" className="h-8 px-2 text-left text-xs font-medium text-gray-500 uppercase w-[100px]">Qty</th>
+                      <th scope="col" className="h-8 px-2 text-left text-xs font-medium text-gray-500 uppercase w-[120px]">Price</th>
+                      <th scope="col" className="h-8 px-2 text-left text-xs font-medium text-gray-500 uppercase w-[100px]">Unit</th>
+                      <th scope="col" className="h-8 px-2 text-right text-xs font-medium text-gray-500 uppercase w-[120px]">Total</th>
+                      <th scope="col" className="h-8 px-2 w-[50px]"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {family.items.map((item, itemIndex) => (
+                      <tr key={item.id} className='hover:bg-slate-50 group'>
+                        <td>
                           <input
-                            type={col.type === 'number' ? 'number' : 'text'}
-                            className="w-full border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow bg-gray-50/50"
-                            value={(item as any)[col.key] || ''}
-                            onChange={(e) => handleItemChange(familyIndex, itemIndex, col.key, e.target.value)}
+                            type="text"
+                            className="w-full border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow"
+                            value={item.name}
+                            onChange={(e) => handleItemChange(familyIndex, itemIndex, 'name', e.target.value)}
                           />
                         </td>
-                      ))}
 
-                      <td className="p-2">
-                        <input
-                          type="number"
-                          className="w-full border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow text-center"
-                          value={item.qty}
-                          onChange={(e) => handleItemChange(familyIndex, itemIndex, 'qty', parseFloat(e.target.value))}
-                        />
-                      </td>
-                      <td className="p-2">
-                        <input
-                          type="number"
-                          step="0.01"
-                          className="w-full border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow text-center"
-                          value={item.unit_price}
-                          onChange={(e) => handleItemChange(familyIndex, itemIndex, 'unit_price', parseFloat(e.target.value))}
-                        />
-                      </td>
-                      <td className="p-2">
-                        <input
-                          type="text"
-                          className="w-full border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow text-center"
-                          value={item.unit_type}
-                          onChange={(e) => handleItemChange(familyIndex, itemIndex, 'unit_type', e.target.value)}
-                        />
-                      </td>
-                      <td className="p-3 text-right text-sm font-medium">
-                        {Number(item.total)?.toFixed(2)}
-                      </td>
-                      <td className="p-2 text-center">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveItem(familyIndex, itemIndex)}
-                          className="text-red-400 hover:text-red-600 opacity-60 group-hover:opacity-100 transition-opacity"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        {customColumns.map(col => (
+                          <td key={col.key}>
+                            <input
+                              type={col.type === 'number' ? 'number' : 'text'}
+                              className="w-full border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow bg-gray-50/50"
+                              value={(item as any)[col.key] || ''}
+                              onChange={(e) => handleItemChange(familyIndex, itemIndex, col.key, e.target.value)}
+                            />
+                          </td>
+                        ))}
+
+                        <td>
+                          <input
+                            type="number"
+                            className="w-full border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow text-center"
+                            value={item.qty}
+                            onChange={(e) => handleItemChange(familyIndex, itemIndex, 'qty', parseFloat(e.target.value))}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            step="0.01"
+                            className="w-full border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow text-center"
+                            value={item.unit_price}
+                            onChange={(e) => handleItemChange(familyIndex, itemIndex, 'unit_price', parseFloat(e.target.value))}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            className="w-full border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow text-center"
+                            value={item.unit_type}
+                            onChange={(e) => handleItemChange(familyIndex, itemIndex, 'unit_type', e.target.value)}
+                          />
+                        </td>
+                        <td className="px-2 text-right text-sm font-medium">
+                          {Number(item.total)?.toFixed(2)}
+                        </td>
+                        <td className="text-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveItem(familyIndex, itemIndex)}
+                            className="text-red-400 hover:text-red-600 opacity-60 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div className="flex justify-end items-center p-4 bg-slate-50 border-t">
-              <span className="text-sm font-medium text-gray-500 mr-4">Family Subtotal:</span>
-              <span className="text-lg font-bold text-gray-800">INR {family.subtotal.toFixed(2)}</span>
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
 
         {quoteFamilies.length > 0 && (
           <div className="mt-8 flex flex-col items-end gap-2 p-6 bg-white rounded-lg border shadow-sm">
-            <div className='flex justify-between w-full md:w-1/3'>
+            <div className='flex justify-between w-full'>
               <span className='text-muted-foreground'>Total Items Cost:</span>
               <span className='font-medium'>INR {calculateGrandTotal().toFixed(2)}</span>
             </div>
             {/* We could add generic tax/discount logic here later */}
-            <div className="h-px bg-gray-200 w-full md:w-1/3 my-2"></div>
-            <div className='flex justify-between w-full md:w-1/3 text-2xl font-bold'>
+            <div className="h-px bg-gray-200 w-full my-2"></div>
+            <div className='flex justify-between w-full text-2xl font-bold'>
               <span>GRAND TOTAL</span>
               <span>INR {calculateGrandTotal().toFixed(2)}</span>
             </div>
