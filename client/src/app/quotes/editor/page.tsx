@@ -3,17 +3,15 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import axios from 'axios';
 import { QuoteFamily, QuoteItem, ProductFamilySerializer, ProductColumn, Customer } from '@/lib/types';
 import { getProductsByFamily, getProductSettings } from '@/lib/api/products';
-import { getQuote, updateQuote, createQuote } from '@/lib/api/quotes';
+import { getQuote, updateQuote, createQuote, getTemplates, Template } from '@/lib/api/quotes';
 import { getProductFamilies } from '@/lib/api/product-families';
 import { getCustomers } from '@/lib/api/customers';
 import { CirclePlus, Loader2, Trash2, Plus, X, Search, User as UserIcon, AtSign, Phone, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
-
-import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 const QuoteEditorContent: React.FC = () => {
   const router = useRouter();
@@ -22,13 +20,17 @@ const QuoteEditorContent: React.FC = () => {
   const { data: session } = useSession();
   const user = session?.user;
 
-  // Local state replacement for useAuthStore's selectedProductFamilies
-  // Note: If cross-page persistence was needed, consider Context or URL state. 
-  // Assuming localized usage for now based on patterns.
+  // Local state
   const [selectedProductFamilies, setSelectedProductFamilies] = useState<ProductFamilySerializer[]>([]);
   const setProductFamiliesForQuote = (families: ProductFamilySerializer[]) => setSelectedProductFamilies(families);
 
   const [quoteFamilies, setQuoteFamilies] = useState<QuoteFamily[]>([]);
+
+  // Template State
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
+  const [activeTemplateColumns, setActiveTemplateColumns] = useState<any[]>([]);
 
   // Customer State
   const [customerName, setCustomerName] = useState<string>('');
@@ -106,50 +108,59 @@ const QuoteEditorContent: React.FC = () => {
   const [selectedFamiliesToAdd, setSelectedFamiliesToAdd] = useState<ProductFamilySerializer[]>([]);
   const [loadingFamilies, setLoadingFamilies] = useState(false);
 
+  // State to store products for each family to display in the drawer
+  const [familyProductsMap, setFamilyProductsMap] = useState<Record<string, any[]>>({});
+
+
+
+
   useEffect(() => {
     const initialize = async () => {
       setIsInitializing(true);
       try {
-        // Fetch custom settings
-        const settings = await getProductSettings();
-        // Filter out system columns that we handle explicitly in specific positions
-        // System columns usually: name, price, family, etc.
-        // We want to show other custom columns.
+        const [settings, customersData, tmpls] = await Promise.all([
+          getProductSettings(),
+          getCustomers(),
+          getTemplates().catch(e => { console.error(e); return []; })
+        ]);
+
+        // Filter system columns
         const filteredCols = settings.filter(c => !['name', 'price', 'family', 'qty', 'total', 'unit_type'].includes(c.key));
         setCustomColumns(filteredCols);
 
-        // Fetch Customers
-        try {
-          const customersData = await getCustomers();
-          setAllCustomers(customersData);
-        } catch (e) {
-          console.error("Failed to fetch customers", e);
-        }
+        setAllCustomers(customersData);
+        setTemplates(tmpls);
 
         if (quoteId) {
-          // Editing existing quote
           const quote = await getQuote(quoteId);
           const details = quote.snapshot as any || quote;
+
           setCustomerName(details.customer_name);
-          // Set additional customer details if present in snapshot/quote
-          // Note: Backend 'getQuote' usually returns 'Item' from DynamoDB. 
-          // If 'snapshot' is present, it might have it. Or the top level item.
           setCustomerId(details.customer_id || null);
           setCustomerEmail(details.customer_email || null);
           setCustomerPhone(details.customer_phone || null);
           setCustomerAddress(details.customer_address || null);
           setDisplayId(details.display_id || '');
           setQuoteFamilies(details.families || []);
-        } else if (selectedProductFamilies.length > 0) {
-          // Creating new quote from selection (passed from previous page, though we are merging functionality)
-          await addFamiliesToQuote(selectedProductFamilies);
-          // Clear the global selection after consuming
-          setProductFamiliesForQuote([]);
+
+          if (details.template_id) {
+            const t = tmpls.find((x: any) => x.id === details.template_id);
+            if (t) {
+              setSelectedTemplate(t);
+              setActiveTemplateColumns(t.columns);
+            }
+          } else if (tmpls.length > 0) {
+            setSelectedTemplate(tmpls[0]);
+            setActiveTemplateColumns(tmpls[0].columns);
+          }
+        } else {
+          if (tmpls.length > 0) setIsTemplateDialogOpen(true);
+
+          if (selectedProductFamilies.length > 0) {
+            await addFamiliesToQuote(selectedProductFamilies);
+            setProductFamiliesForQuote([]);
+          }
         }
-
-        // If we want to auto-open dialog if empty:
-        // if (!quoteId && selectedProductFamilies.length === 0) setIsAddFamilyOpen(true);
-
       } catch (err: any) {
         setError(err.message || 'Failed to initialize quote editor.');
       } finally {
@@ -158,10 +169,18 @@ const QuoteEditorContent: React.FC = () => {
     };
 
     initialize();
-  }, [quoteId, router]); // Removed selectedProductFamilies from dep to avoid loop if we clear it
+  }, [quoteId, router]);
 
-  // State to store products for each family to display in the drawer
-  const [familyProductsMap, setFamilyProductsMap] = useState<Record<string, any[]>>({});
+  const handleTemplateSelect = (templateId: string) => {
+    const tmpl = templates.find(t => t.id === templateId);
+    if (tmpl) {
+      setSelectedTemplate(tmpl);
+      setActiveTemplateColumns(tmpl.columns);
+      setIsTemplateDialogOpen(false);
+    }
+  };
+
+
 
   // Separate effect to fetch families for the dialog
   useEffect(() => {
@@ -274,9 +293,11 @@ const QuoteEditorContent: React.FC = () => {
       unit_type: 'unit',
       total: 0,
     };
-    // Initialize custom fields with empty strings
-    customColumns.forEach(col => {
-      (newItem as any)[col.key] = '';
+    // Initialize dynamic fields
+    activeTemplateColumns.forEach(col => {
+      if (!['name', 'qty', 'unit_price', 'unit_type', 'total'].includes(col.key)) {
+        (newItem as any)[col.key] = col.type === 'number' ? 0 : '';
+      }
     });
 
     setQuoteFamilies(prevFamilies =>
@@ -342,6 +363,7 @@ const QuoteEditorContent: React.FC = () => {
       })),
       total_amount: calculateGrandTotal(),
       created_by_user_id: user.id,
+      template_id: selectedTemplate?.id,
     };
 
     try {
@@ -505,68 +527,31 @@ const QuoteEditorContent: React.FC = () => {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead>
                     <tr>
-                      <th scope="col" className="h-8 px-2 text-left text-xs font-medium text-gray-500 uppercase min-w-[200px]">Item</th>
-                      {customColumns.map(col => (
-                        <th key={col.key} scope="col" className="h-8 px-2 text-left text-xs font-medium text-gray-500 uppercase min-w-[120px]">{col.label}</th>
+                      {activeTemplateColumns.map((col: any) => (
+                        <th key={col.key || col.id} scope="col" className="h-8 px-2 text-left text-xs font-medium text-gray-500 uppercase min-w-[100px]">{col.label}</th>
                       ))}
-                      <th scope="col" className="h-8 px-2 text-left text-xs font-medium text-gray-500 uppercase w-[100px]">Qty</th>
-                      <th scope="col" className="h-8 px-2 text-left text-xs font-medium text-gray-500 uppercase w-[120px]">Price</th>
-                      <th scope="col" className="h-8 px-2 text-left text-xs font-medium text-gray-500 uppercase w-[100px]">Unit</th>
-                      <th scope="col" className="h-8 px-2 text-right text-xs font-medium text-gray-500 uppercase w-[120px]">Total</th>
                       <th scope="col" className="h-8 px-2 w-[50px]"></th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {family.items.map((item, itemIndex) => (
                       <tr key={item.id} className='hover:bg-slate-50 group'>
-                        <td>
-                          <input
-                            type="text"
-                            className="w-full border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow"
-                            value={item.name}
-                            onChange={(e) => handleItemChange(familyIndex, itemIndex, 'name', e.target.value)}
-                          />
-                        </td>
-
-                        {customColumns.map(col => (
-                          <td key={col.key}>
+                        {activeTemplateColumns.map((col: any) => (
+                          <td key={col.key || col.id}>
                             <input
                               type={col.type === 'number' ? 'number' : 'text'}
-                              className="w-full border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow bg-gray-50/50"
-                              value={(item as any)[col.key] || ''}
-                              onChange={(e) => handleItemChange(familyIndex, itemIndex, col.key, e.target.value)}
+                              step={col.type === 'number' ? '0.01' : undefined}
+                              className={`w-full border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow ${(!col.editable && col.key !== 'qty' && col.key !== 'unit_price') ? 'bg-gray-100/50 text-gray-600' : ''}`}
+                              value={(item as any)[col.key] ?? ''}
+                              readOnly={!!col.formula && col.key !== 'qty' && col.key !== 'unit_price'} // Allow edit unless strict formula? Ideally logic handles it.
+                              // For now, allow edit if no formula
+                              onChange={(e) => {
+                                const val = col.type === 'number' ? parseFloat(e.target.value) : e.target.value;
+                                handleItemChange(familyIndex, itemIndex, col.key, val);
+                              }}
                             />
                           </td>
                         ))}
-
-                        <td>
-                          <input
-                            type="number"
-                            className="w-full border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow text-center"
-                            value={item.qty}
-                            onChange={(e) => handleItemChange(familyIndex, itemIndex, 'qty', parseFloat(e.target.value))}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            step="0.01"
-                            className="w-full border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow text-center"
-                            value={item.unit_price}
-                            onChange={(e) => handleItemChange(familyIndex, itemIndex, 'unit_price', parseFloat(e.target.value))}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            className="w-full border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none transition-shadow text-center"
-                            value={item.unit_type}
-                            onChange={(e) => handleItemChange(familyIndex, itemIndex, 'unit_type', e.target.value)}
-                          />
-                        </td>
-                        <td className="px-2 text-right text-sm font-medium">
-                          {Number(item.total)?.toFixed(2)}
-                        </td>
                         <td className="text-center">
                           <Button
                             variant="ghost"
@@ -673,6 +658,38 @@ const QuoteEditorContent: React.FC = () => {
           </SheetFooter>
         </SheetContent>
       </Sheet>
+
+      <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
+        <DialogContent closable={false}>
+          <DialogHeader>
+            <DialogTitle>Select Quote Template</DialogTitle>
+            <DialogDescription>
+              Choose a template for this quote to configure the item table columns.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 max-h-[60vh] overflow-y-auto">
+            {templates.length > 0 ? (
+              <div className="grid gap-2">
+                {templates.map(tmpl => (
+                  <div
+                    key={tmpl.id}
+                    className={`p-3 border rounded cursor-pointer hover:bg-gray-50 flex justify-between items-center ${selectedTemplate?.id === tmpl.id ? 'border-blue-500 bg-blue-50' : ''}`}
+                    onClick={() => handleTemplateSelect(tmpl.id)}
+                  >
+                    <span className="font-medium">{tmpl.name}</span>
+                    <span className="text-xs text-gray-500">{tmpl.columns.length} columns</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-sm text-gray-500 mb-4">No templates found.</p>
+                <Button variant="outline" onClick={() => router.push('/quotes/templates')}>Manage Templates</Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
