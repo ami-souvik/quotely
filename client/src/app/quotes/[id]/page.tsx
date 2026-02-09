@@ -35,26 +35,38 @@ const QuoteDetailPage: React.FC = () => {
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [templateName, setTemplateName] = useState<string>('');
 
   useEffect(() => {
     if (id) {
       const fetchData = async () => {
         try {
-          const [fetchedQuote, templateSettings] = await Promise.all([
+          const [fetchedQuote, tmpls] = await Promise.all([
             getQuote(id),
-            getTemplateSettings()
+            getTemplates().catch(e => { console.error(e); return []; })
           ]);
           setQuote(fetchedQuote);
+          setTemplates(tmpls);
 
-          if (templateSettings && templateSettings.length > 0) {
-            setColumns(templateSettings);
+          const details = fetchedQuote.snapshot as any || fetchedQuote; // Handle snapshot or live quote
+
+          let activeTmpl = null;
+          if (details.template_id) {
+            activeTmpl = tmpls.find((t: any) => t.id === details.template_id);
+          }
+
+          if (activeTmpl) {
+            // Use template columns (filtered for visibility if needed, usually 'selected' prop)
+            setColumns(activeTmpl.columns.filter((c: any) => c.selected));
+            setTemplateName(activeTmpl.name);
+            setSelectedTemplate(activeTmpl.id);
           } else {
+            // Fallback default columns
             setColumns([
               { key: 'name', label: 'Item Name' },
-              { key: 'price', label: 'Price' },
-              { key: 'family', label: 'Family' },
               { key: 'quantity', label: 'Quantity' },
               { key: 'unit_type', label: 'Unit' },
+              { key: 'price', label: 'Price' },
               { key: 'total', label: 'Total' }
             ]);
           }
@@ -73,52 +85,22 @@ const QuoteDetailPage: React.FC = () => {
     setDownloading(true);
     setPdfMode(mode);
     try {
-      // 1. Fetch available templates
-      const templates = await getTemplates().catch(e => {
-        console.error("Failed to fetch templates", e);
-        return [];
-      });
+      // Use the active template for the quotation
+      let tmplId = selectedTemplate;
 
-      // 2. If existing templates, ask user
-      if (templates.length > 0) {
-        setTemplates(templates);
-        // Default to first one or previously selected?
-        setSelectedTemplate(templates[0].id);
-        setShowTemplateDialog(true);
-        setDownloading(false); // Stop spinner, wait for user input
-        return;
+      // Fallback: if no template assigned to quote, use the first available one (default)
+      if (!tmplId && templates.length > 0) {
+        tmplId = templates[0].id;
       }
 
-      // 3. Fallback: Default/Legacy generation
-      await generatePdf(id);
+      await generatePdf(id, tmplId);
       const url = await getPresignedUrl(id, mode === 'download');
       window.open(url, '_blank');
-      setDownloading(false);
     } catch (err: any) {
       console.error("PDF action failed", err);
-      // Fallback: maybe it was already there?
-      try {
-        await generatePdf(id);
-        const url = await getPresignedUrl(id, mode === 'download');
-        window.open(url, '_blank');
-        setDownloading(false);
-      } catch (e) {
-        alert('Failed to generate PDF.');
-        setDownloading(false);
-      }
-    }
-  };
-
-  const confirmPdfAction = async () => {
-    setShowTemplateDialog(false);
-    setDownloading(true);
-    try {
-      await generatePdf(id, selectedTemplate);
-      const url = await getPresignedUrl(id, pdfMode === 'download');
-      window.open(url, '_blank');
-    } catch (err: any) {
-      console.error("Template PDF action failed", err);
-      alert('Failed to generate PDF with template.');
+      // Try legacy generation without template ID if specific fail? 
+      // Or just alert.
+      alert('Failed to generate PDF.');
     } finally {
       setDownloading(false);
     }
@@ -175,6 +157,14 @@ const QuoteDetailPage: React.FC = () => {
               <p className="text-muted-foreground">Date</p>
               <p className="font-medium">{new Date(quote.created_at).toLocaleDateString()}</p>
             </div>
+            {templateName && (
+              <div className="col-span-2">
+                <p className="text-muted-foreground">Template</p>
+                <p className="font-medium flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" /> {templateName}
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -226,36 +216,7 @@ const QuoteDetailPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Select PDF Template</DialogTitle>
-            <DialogDescription>
-              Choose a template format for the quotation PDF.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <RadioGroup value={selectedTemplate} onValueChange={setSelectedTemplate}>
-              {templates.map(tmpl => (
-                <div key={tmpl.id} className="flex items-center space-x-2 mb-2 p-2 rounded hover:bg-slate-50 border border-transparent hover:border-slate-100">
-                  <RadioGroupItem value={tmpl.id} id={`tmpl-${tmpl.id}`} />
-                  <Label htmlFor={`tmpl-${tmpl.id}`} className="flex-1 cursor-pointer flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    {tmpl.name}
-                  </Label>
-                </div>
-              ))}
-            </RadioGroup>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowTemplateDialog(false)}>Cancel</Button>
-            <Button onClick={confirmPdfAction} disabled={downloading}>
-              {downloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-              Generate & Download
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
     </div>
   );
 };
