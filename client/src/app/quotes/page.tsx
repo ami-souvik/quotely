@@ -127,9 +127,14 @@ const DashboardPage: React.FC = () => {
   };
 
   return (
-    <>
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+    <div className='space-y-6'>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Manage and view all your product and families.
+          </p>
+        </div>
         <div className="flex items-center space-x-2">
           {user?.role === 'ADMIN' && (
             <Button variant="outline" onClick={() => router.push('/quotes/products')}>
@@ -143,7 +148,7 @@ const DashboardPage: React.FC = () => {
       </div>
 
       {/* My Quotes Section */}
-      <section className="mb-8">
+      <section>
         <h3 className="text-xl font-semibold mb-4">All Quotes</h3>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {loading && quotes.length === 0 ? (
@@ -198,7 +203,7 @@ const DashboardPage: React.FC = () => {
           </Card>
         </section>
       )}
-    </>
+    </div>
   );
 };
 

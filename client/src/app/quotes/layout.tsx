@@ -32,11 +32,11 @@ export default function DashboardLayout({
   if (!session) return null;
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr]">
+    <div className="flex min-h-screen w-full bg-slate-50">
       <Sidebar />
-      <div className="flex flex-col">
+      <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
-        <main className="flex flex-1 flex-col gap-4 lg:gap-6">
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-slate-50/50">
           {children}
         </main>
       </div>
