@@ -16,25 +16,45 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const quote = await services.getQuotation(user.org_id, quoteId);
     if (!quote) return NextResponse.json({ error: 'Quote not found' }, { status: 404 });
 
-    // 2. Get Template settings
+    // 2. Determine Template Columns
     let pdfSettings: any = null;
+    let templateIdToCheck = null;
+
     try {
         const body = await req.json();
-        const templateId = body.template_id;
-        if (templateId) {
-            const template = await services.getTemplate(user.org_id, templateId);
-            if (template) {
-                pdfSettings = { columns: template.columns };
-            }
-        }
+        if (body.template_id) templateIdToCheck = body.template_id;
     } catch (e) {
-        // Body might be empty
+        // Body reading might fail if empty/not-json, ignore
+    }
+
+    // If not in body, check quote's assigned template
+    if (!templateIdToCheck && quote.template_id) {
+        templateIdToCheck = quote.template_id;
+    }
+
+    if (templateIdToCheck) {
+        const template = await services.getTemplate(user.org_id, templateIdToCheck);
+        if (template) {
+            // Use only selected columns for the PDF
+            pdfSettings = { columns: template.columns.filter((c: any) => c.selected !== false) };
+        }
     }
 
     if (!pdfSettings) {
-        // Fallback to legacy/default settings
+        // Fallback to legacy settings or defaults
         const columns = await services.getTemplateSettings(user.org_id);
-        pdfSettings = { columns };
+        if (columns && columns.length > 0) {
+            pdfSettings = { columns };
+        } else {
+            // Hard defaults if nothing else is found
+            pdfSettings = { columns: [
+                  { key: 'name', label: 'Item Name' },
+                  { key: 'quantity', label: 'Quantity' },
+                  { key: 'unit_type', label: 'Unit' },
+                  { key: 'price', label: 'Price' },
+                  { key: 'total', label: 'Total' }
+             ]};
+        }
     }
 
     // 3. Get Organization Settings
