@@ -260,10 +260,9 @@ export default function TemplatesPage() {
             // Default columns for new template (Updated per requirement)
             const defaultCols = [
                 { key: 'name', label: 'Item Name', type: 'text' },
-                { key: 'price', label: 'Price', type: 'number' },
-                { key: 'family', label: 'Family', type: 'text' },
                 { key: 'quantity', label: 'Quantity', type: 'number' },
                 { key: 'unit_type', label: 'Unit', type: 'text' },
+                { key: 'price', label: 'Price', type: 'number' },
                 { key: 'total', label: 'Total', type: 'formula', formula: 'price * quantity' }
             ];
 
@@ -303,10 +302,9 @@ export default function TemplatesPage() {
             // Standard columns always available
             const standardColumns = [
                 { key: 'name', label: 'Item Name', type: 'text' },
-                { key: 'price', label: 'Price', type: 'number' },
-                { key: 'family', label: 'Family', type: 'text' },
                 { key: 'quantity', label: 'Quantity', type: 'number' },
                 { key: 'unit_type', label: 'Unit', type: 'text' },
+                { key: 'price', label: 'Price', type: 'number' },
                 { key: 'total', label: 'Total', type: 'formula', formula: 'price * quantity' }
             ];
 
