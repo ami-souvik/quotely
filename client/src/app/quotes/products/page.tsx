@@ -289,45 +289,60 @@ const ProductsPage: React.FC = () => {
     if (error) return <div className="p-4 text-red-500">{error}</div>;
 
     return (
-        <div>
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold">Product Management</h1>
+        <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h3 className="text-3xl font-bold tracking-tight">Product Management</h3>
+                    <p className="text-muted-foreground">
+                        Manage and view all your product and families.
+                    </p>
+                </div>
+                {activeTab === 'products' &&
+                    <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setIsSettingsOpen(true)}>
+                            <Settings className="h-4 w-4" /> Configure Columns
+                        </Button>
+                        <Button onClick={() => { setCurrentProduct({}); setIsProductDialogOpen(true); }}>
+                            <Plus className="h-4 w-4" /> Add Product
+                        </Button>
+                    </div>
+                }
+                {activeTab === 'families' &&
+                    <div className="flex justify-end">
+                        <Button onClick={() => { setCurrentFamily({}); setIsFamilyDialogOpen(true); }}>
+                            <Plus className="h-4 w-4" /> Add Family
+                        </Button>
+                    </div>
+                }
             </div>
 
             {/* Tabs Navigation */}
-            <div className="flex space-x-2 border-b mb-6">
-                <button
-                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'products'
-                        ? 'border-primary text-primary'
-                        : 'border-transparent text-muted-foreground hover:text-foreground'
-                        }`}
-                    onClick={() => setActiveTab('products')}
-                >
-                    Products
-                </button>
-                <button
-                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'families'
-                        ? 'border-primary text-primary'
-                        : 'border-transparent text-muted-foreground hover:text-foreground'
-                        }`}
-                    onClick={() => setActiveTab('families')}
-                >
-                    Families
-                </button>
+            <div className="flex justify-between border-b">
+                <div className="flex space-x-2">
+                    <button
+                        className={`px-2 py-1 text-sm font-medium border-b-2 transition-colors ${activeTab === 'products'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground'
+                            }`}
+                        onClick={() => setActiveTab('products')}
+                    >
+                        Products
+                    </button>
+                    <button
+                        className={`px-2 py-1 text-sm font-medium border-b-2 transition-colors ${activeTab === 'families'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground'
+                            }`}
+                        onClick={() => setActiveTab('families')}
+                    >
+                        Families
+                    </button>
+                </div>
             </div>
 
             {/* Content: Products */}
-            {activeTab === 'products' && (
-                <div>
-                    <div className="flex justify-end gap-2 mb-4">
-                        <Button variant="outline" onClick={() => setIsSettingsOpen(true)}>
-                            <Settings className="mr-2 h-4 w-4" /> Configure Columns
-                        </Button>
-                        <Button onClick={() => { setCurrentProduct({}); setIsProductDialogOpen(true); }}>
-                            <Plus className="mr-2 h-4 w-4" /> Add Product
-                        </Button>
-                    </div>
-
+            {activeTab === 'products' &&
+                <div className="rounded-md border">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -367,17 +382,11 @@ const ProductsPage: React.FC = () => {
                         </TableBody>
                     </Table>
                 </div>
-            )}
+            }
 
             {/* Content: Families */}
             {activeTab === 'families' && (
-                <div>
-                    <div className="flex justify-end mb-4">
-                        <Button onClick={() => { setCurrentFamily({}); setIsFamilyDialogOpen(true); }}>
-                            <Plus className="mr-2 h-4 w-4" /> Add Family
-                        </Button>
-                    </div>
-
+                <div className="rounded-md border">
                     <Table>
                         <TableHeader>
                             <TableRow>
