@@ -80,6 +80,7 @@ export interface Quote {
   s3_pdf_link?: string;
   families?: QuoteFamily[];
   snapshot?: any;
+  template_id?: string;
 }
 
 export interface MasterItem {
