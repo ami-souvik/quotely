@@ -23,11 +23,11 @@ import {
 import { Label } from "@/components/ui/label";
 import { getProductSettings } from '@/lib/api/products';
 import {
-    getPDFTemplates,
-    createPDFTemplate,
-    updatePDFTemplate,
-    deletePDFTemplate,
-    PDFTemplate
+    getTemplates,
+    createTemplate,
+    updateTemplate,
+    deleteTemplate,
+    Template
 } from '@/lib/api/quotes';
 import { getOrganization, Organization } from '@/lib/api/organization';
 import { Loader2, GripVertical, Plus, Trash2, FileText, Settings, Info } from 'lucide-react';
@@ -195,7 +195,7 @@ function SortableItem({ col, index, onToggle, onLabelChange, onRemove }: Sortabl
 }
 
 export default function TemplatesPage() {
-    const [templates, setTemplates] = useState<PDFTemplate[]>([]);
+    const [templates, setTemplates] = useState<Template[]>([]);
     const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
     const [columns, setColumns] = useState<ColumnConfig[]>([]);
     const [orgData, setOrgData] = useState<Organization | null>(null);
@@ -238,7 +238,7 @@ export default function TemplatesPage() {
         setLoading(true);
         try {
             const [tmplData, org] = await Promise.all([
-                getPDFTemplates(),
+                getTemplates(),
                 getOrganization() // Fetch organization details
             ]);
             setTemplates(tmplData);
@@ -267,7 +267,7 @@ export default function TemplatesPage() {
                 { key: 'total', label: 'Total', type: 'formula', formula: 'price * quantity' }
             ];
 
-            const newTmpl = await createPDFTemplate({
+            const newTmpl = await createTemplate({
                 name: newTemplateName,
                 columns: defaultCols
             });
@@ -287,7 +287,7 @@ export default function TemplatesPage() {
         if (!confirm("Are you sure you want to delete this template?")) return;
 
         try {
-            await deletePDFTemplate(id);
+            await deleteTemplate(id);
             const remaining = templates.filter(t => t.id !== id);
             setTemplates(remaining);
             if (selectedTemplateId === id) {
@@ -298,7 +298,7 @@ export default function TemplatesPage() {
         }
     };
 
-    const loadColumnsForTemplate = async (template: PDFTemplate) => {
+    const loadColumnsForTemplate = async (template: Template) => {
         try {
             // Standard columns always available
             const standardColumns = [
@@ -376,7 +376,7 @@ export default function TemplatesPage() {
                 formula: c.formula
             }));
 
-            const updated = await updatePDFTemplate(selectedTemplateId, { columns: payload });
+            const updated = await updateTemplate(selectedTemplateId, { columns: payload });
             setTemplates(templates.map(t => t.id === selectedTemplateId ? updated : t));
         } catch (err: any) {
             alert("Failed to update template");
@@ -432,11 +432,11 @@ export default function TemplatesPage() {
     if (loading && templates.length === 0) return <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>;
 
     return (
-        <div className="flex h-[calc(100vh-64px)] overflow-hidden">
+        <div className="flex h-[calc(100vh-88px)] overflow-hidden">
             {/* Sidebar: List of Templates */}
-            <div className="w-64 border-r bg-gray-50 flex flex-col">
-                <div className="p-4 border-b">
-                    <h2 className="font-semibold mb-4">Quote Templates</h2>
+            <div className="w-64 pr-2 border-r bg-gray-50 flex flex-col">
+                <div className="pb-2 border-b">
+                    <h2 className="font-semibold mb-2">Quote Templates</h2>
                     <div className="flex gap-2">
                         <Input
                             placeholder="New Template Name"
@@ -449,7 +449,7 @@ export default function TemplatesPage() {
                         </Button>
                     </div>
                 </div>
-                <div className="flex-1 overflow-y-auto p-3 space-y-1">
+                <div className="flex-1 overflow-y-auto py-2 space-y-1">
                     {templates.map(tmpl => (
                         <div
                             key={tmpl.id}
@@ -478,8 +478,8 @@ export default function TemplatesPage() {
                 {selectedTemplateId ? (
                     <div className="flex h-full">
                         {/* Editor Column */}
-                        <div className="w-[40%] flex flex-col border-r">
-                            <div className="flex-1 overflow-y-auto p-4">
+                        <div className="w-[40%] bg-gray-50 px-2 flex flex-col border-r">
+                            <div className="flex-1 overflow-y-auto">
                                 <div className="space-y-6">
                                     <div className="flex justify-between items-start">
                                         <div>
@@ -566,7 +566,7 @@ export default function TemplatesPage() {
                                 </div>
                             </div>
                             {/* Save Button Footer */}
-                            <div className="p-4 border-t bg-gray-50 flex justify-end">
+                            <div className="pt-2 border-t flex justify-end">
                                 <Button onClick={handleSaveColumns} disabled={saving} className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto">
                                     {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                                     Save Configuration
@@ -575,7 +575,7 @@ export default function TemplatesPage() {
                         </div>
 
                         {/* Preview Column */}
-                        <div className="w-[60%] bg-gray-100 p-3 flex flex-col border-l">
+                        <div className="w-[60%] bg-gray-50 pl-2 flex flex-col border-l">
                             <div className="mb-2 flex items-center justify-between">
                                 <h3 className="font-semibold text-sm uppercase text-gray-500">Live Preview</h3>
                             </div>

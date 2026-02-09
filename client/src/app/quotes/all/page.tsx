@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { getQuotes, deleteQuote, Quote, generatePdf, getPresignedUrl, getPDFTemplates, PDFTemplate } from '@/lib/api/quotes';
+import { getQuotes, deleteQuote, Quote, generatePdf, getPresignedUrl, getTemplates, Template } from '@/lib/api/quotes';
 import axios from 'axios';
 
 const AllQuotesPage: React.FC = () => {
@@ -39,8 +39,8 @@ const AllQuotesPage: React.FC = () => {
 
   // PDF Template State
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
-  const [pdfTemplates, setPdfTemplates] = useState<PDFTemplate[]>([]);
-  const [selectedPdfTemplate, setSelectedPdfTemplate] = useState<string>('');
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [activeQuoteId, setActiveQuoteId] = useState<string | null>(null);
 
   const fetchQuotes = async () => {
@@ -77,10 +77,10 @@ const AllQuotesPage: React.FC = () => {
     setProcessingId(quoteId);
     setPdfMode(mode);
     try {
-      const templates = await getPDFTemplates().catch(() => []);
+      const templates = await getTemplates().catch(() => []);
       if (templates.length > 0) {
-        setPdfTemplates(templates);
-        setSelectedPdfTemplate(templates[0].id);
+        setTemplates(templates);
+        setSelectedTemplate(templates[0].id);
         setActiveQuoteId(quoteId);
         setShowTemplateDialog(true);
         setProcessingId(null);
@@ -101,7 +101,7 @@ const AllQuotesPage: React.FC = () => {
     setShowTemplateDialog(false);
     setProcessingId(activeQuoteId);
     try {
-      await generatePdf(activeQuoteId, selectedPdfTemplate);
+      await generatePdf(activeQuoteId, selectedTemplate);
       const url = await getPresignedUrl(activeQuoteId, pdfMode === 'download');
       window.open(url, '_blank');
     } catch (err) {
@@ -254,8 +254,8 @@ const AllQuotesPage: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <RadioGroup value={selectedPdfTemplate} onValueChange={setSelectedPdfTemplate}>
-              {pdfTemplates.map(tmpl => (
+            <RadioGroup value={selectedTemplate} onValueChange={setSelectedTemplate}>
+              {templates.map(tmpl => (
                 <div key={tmpl.id} className="flex items-center space-x-2 mb-2 p-2 rounded hover:bg-slate-50 border border-transparent hover:border-slate-100">
                   <RadioGroupItem value={tmpl.id} id={`tmpl-${tmpl.id}`} />
                   <Label htmlFor={`tmpl-${tmpl.id}`} className="flex-1 cursor-pointer flex items-center gap-2">

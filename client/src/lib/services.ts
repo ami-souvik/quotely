@@ -10,7 +10,7 @@ import {
 import { PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
-import { Quote, Customer, Product, ProductFamily, MasterItem, PDFTemplate } from '@/lib/types'; // Assuming types exist or I'll define roughly
+import { Quote, Customer, Product, ProductFamily, MasterItem, Template } from '@/lib/types'; // Assuming types exist or I'll define roughly
 
 export class QuotelyService {
   private tableName = DYNAMO_TABLE_NAME;
@@ -725,8 +725,8 @@ export class QuotelyService {
        }
   }
 
-   // --- PDF Templates (Multi) ---
-   async createPDFTemplate(orgId: string, data: any): Promise<any> {
+   // --- Templates (Multi) ---
+   async createTemplate(orgId: string, data: any): Promise<any> {
     const templateId = uuidv4();
     const item = {
         PK: `ORG#${orgId}`,
@@ -745,7 +745,7 @@ export class QuotelyService {
     }
    }
 
-   async getPDFTemplates(orgId: string): Promise<any[]> {
+   async getTemplates(orgId: string): Promise<any[]> {
        try {
            const response = await db.send(new QueryCommand({
                TableName: this.tableName,
@@ -757,12 +757,12 @@ export class QuotelyService {
            }));
            return (response.Items || []).map(item => ({ ...item, id: item.SK.split('#')[1] }));
        } catch (e) {
-           console.error("Error fetching PDF templates:", e);
+           console.error("Error fetching templates:", e);
            return [];
        }
    }
 
-   async getPDFTemplate(orgId: string, templateId: string): Promise<any> {
+   async getTemplate(orgId: string, templateId: string): Promise<any> {
        try {
            const response = await db.send(new GetCommand({
                TableName: this.tableName,
@@ -776,7 +776,7 @@ export class QuotelyService {
        }
    }
 
-   async updatePDFTemplate(orgId: string, templateId: string, data: Partial<PDFTemplate>): Promise<any> {
+   async updateTemplate(orgId: string, templateId: string, data: Partial<Template>): Promise<any> {
        const updateParts: string[] = [];
        const attrNames: any = {};
        const attrValues: any = {};
@@ -815,7 +815,7 @@ export class QuotelyService {
        }
    }
 
-   async deletePDFTemplate(orgId: string, templateId: string): Promise<boolean> {
+   async deleteTemplate(orgId: string, templateId: string): Promise<boolean> {
       try {
           await db.send(new DeleteCommand({
               TableName: this.tableName,

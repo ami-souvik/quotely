@@ -45,34 +45,34 @@ export const updateTemplateSettings = async (columns: any[]): Promise<any[]> => 
   return response.data.columns;
 };
 
-// PDF Templates
-export interface PDFTemplate {
+// Templates
+export interface Template {
   id: string;
   name: string;
   columns: any[];
   created_at?: string;
 }
 
-export const getPDFTemplates = async (): Promise<PDFTemplate[]> => {
+export const getTemplates = async (): Promise<Template[]> => {
   const response = await axios.get('/api/quotes/pdf-templates/');
   return response.data;
 };
 
-export const getPDFTemplate = async (id: string): Promise<PDFTemplate> => {
+export const getTemplate = async (id: string): Promise<Template> => {
   const response = await axios.get(`/api/quotes/pdf-templates/${id}/`);
   return response.data;
 };
 
-export const createPDFTemplate = async (data: Partial<PDFTemplate>): Promise<PDFTemplate> => {
+export const createTemplate = async (data: Partial<Template>): Promise<Template> => {
   const response = await axios.post('/api/quotes/pdf-templates/', data);
   return response.data;
 };
 
-export const updatePDFTemplate = async (id: string, data: Partial<PDFTemplate>): Promise<PDFTemplate> => {
+export const updateTemplate = async (id: string, data: Partial<Template>): Promise<Template> => {
   const response = await axios.put(`/api/quotes/pdf-templates/${id}/`, data);
   return response.data;
 };
 
-export const deletePDFTemplate = async (id: string): Promise<void> => {
+export const deleteTemplate = async (id: string): Promise<void> => {
   await axios.delete(`/api/quotes/pdf-templates/${id}/`);
 };

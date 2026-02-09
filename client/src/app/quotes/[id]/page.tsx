@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getQuote, generatePdf, getPresignedUrl, Quote, getTemplateSettings, getPDFTemplates, PDFTemplate } from '@/lib/api/quotes';
+import { getQuote, generatePdf, getPresignedUrl, Quote, getTemplateSettings, getTemplates, Template } from '@/lib/api/quotes';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,8 +33,8 @@ const QuoteDetailPage: React.FC = () => {
 
   // PDF Template State
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
-  const [pdfTemplates, setPdfTemplates] = useState<PDFTemplate[]>([]);
-  const [selectedPdfTemplate, setSelectedPdfTemplate] = useState<string>('');
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
 
   useEffect(() => {
     if (id) {
@@ -74,16 +74,16 @@ const QuoteDetailPage: React.FC = () => {
     setPdfMode(mode);
     try {
       // 1. Fetch available templates
-      const templates = await getPDFTemplates().catch(e => {
+      const templates = await getTemplates().catch(e => {
         console.error("Failed to fetch templates", e);
         return [];
       });
 
       // 2. If existing templates, ask user
       if (templates.length > 0) {
-        setPdfTemplates(templates);
+        setTemplates(templates);
         // Default to first one or previously selected?
-        setSelectedPdfTemplate(templates[0].id);
+        setSelectedTemplate(templates[0].id);
         setShowTemplateDialog(true);
         setDownloading(false); // Stop spinner, wait for user input
         return;
@@ -113,7 +113,7 @@ const QuoteDetailPage: React.FC = () => {
     setShowTemplateDialog(false);
     setDownloading(true);
     try {
-      await generatePdf(id, selectedPdfTemplate);
+      await generatePdf(id, selectedTemplate);
       const url = await getPresignedUrl(id, pdfMode === 'download');
       window.open(url, '_blank');
     } catch (err: any) {
@@ -235,8 +235,8 @@ const QuoteDetailPage: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <RadioGroup value={selectedPdfTemplate} onValueChange={setSelectedPdfTemplate}>
-              {pdfTemplates.map(tmpl => (
+            <RadioGroup value={selectedTemplate} onValueChange={setSelectedTemplate}>
+              {templates.map(tmpl => (
                 <div key={tmpl.id} className="flex items-center space-x-2 mb-2 p-2 rounded hover:bg-slate-50 border border-transparent hover:border-slate-100">
                   <RadioGroupItem value={tmpl.id} id={`tmpl-${tmpl.id}`} />
                   <Label htmlFor={`tmpl-${tmpl.id}`} className="flex-1 cursor-pointer flex items-center gap-2">

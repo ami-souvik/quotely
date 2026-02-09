@@ -22,7 +22,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         const body = await req.json();
         const templateId = body.template_id;
         if (templateId) {
-            const template = await services.getPDFTemplate(user.org_id, templateId);
+            const template = await services.getTemplate(user.org_id, templateId);
             if (template) {
                 pdfSettings = { columns: template.columns };
             }
