@@ -388,14 +388,7 @@ export default function TemplatesPage() {
         if (!selectedTemplateId) return;
         setSaving(true);
         try {
-            const payload = columns.filter(c => c.selected).map(c => ({
-                key: c.key,
-                label: c.label,
-                type: c.type,
-                formula: c.formula
-            }));
-
-            const updated = await updateTemplate(selectedTemplateId, { columns: payload });
+            const updated = await updateTemplate(selectedTemplateId, { columns });
             setTemplates(templates.map(t => t.id === selectedTemplateId ? updated : t));
         } catch (err: any) {
             alert("Failed to update template");

@@ -147,11 +147,11 @@ const QuoteEditorContent: React.FC = () => {
             const t = tmpls.find((x: any) => x.id === details.template_id);
             if (t) {
               setSelectedTemplate(t);
-              setActiveTemplateColumns(t.columns);
+              setActiveTemplateColumns(t.columns.filter(c => c.selected));
             }
           } else if (tmpls.length > 0) {
             setSelectedTemplate(tmpls[0]);
-            setActiveTemplateColumns(tmpls[0].columns);
+            setActiveTemplateColumns(tmpls[0].columns.filter(c => c.selected));
           }
         } else {
           if (tmpls.length > 0) setIsTemplateDialogOpen(true);
@@ -175,7 +175,7 @@ const QuoteEditorContent: React.FC = () => {
     const tmpl = templates.find(t => t.id === templateId);
     if (tmpl) {
       setSelectedTemplate(tmpl);
-      setActiveTemplateColumns(tmpl.columns);
+      setActiveTemplateColumns(tmpl.columns.filter(c => c.selected));
       setIsTemplateDialogOpen(false);
     }
   };
