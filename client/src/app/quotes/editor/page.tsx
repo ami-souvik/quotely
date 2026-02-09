@@ -263,7 +263,7 @@ const QuoteEditorContent: React.FC = () => {
           // Map dynamic columns
           activeTemplateColumns.forEach(col => {
             // Value priority: Product Prop -> Custom Field -> Default
-            let val = product[col.key];
+            let val = (product as any)[col.key];
             if (val === undefined && product.custom_fields) {
               val = product.custom_fields[col.key];
             }
@@ -480,7 +480,7 @@ const QuoteEditorContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen">
+    <div>
       <div className='flex justify-between items-center mb-4'>
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{quoteId ? 'Edit Quote' : 'New Quote'}</h1>
         <div className='flex gap-2'>
@@ -638,12 +638,6 @@ const QuoteEditorContent: React.FC = () => {
 
         {quoteFamilies.length > 0 && (
           <div className="mt-8 flex flex-col items-end gap-2 p-6 bg-white rounded-lg border shadow-sm">
-            <div className='flex justify-between w-full'>
-              <span className='text-muted-foreground'>Total Items Cost:</span>
-              <span className='font-medium'>INR {calculateGrandTotal().toFixed(2)}</span>
-            </div>
-            {/* We could add generic tax/discount logic here later */}
-            <div className="h-px bg-gray-200 w-full my-2"></div>
             <div className='flex justify-between w-full text-2xl font-bold'>
               <span>GRAND TOTAL</span>
               <span>INR {calculateGrandTotal().toFixed(2)}</span>

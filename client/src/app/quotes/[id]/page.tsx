@@ -169,18 +169,23 @@ const QuoteDetailPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      <div className="space-y-6">
+      <div className="bg-white rounded-md border overflow-hidden">
         {details.families?.map((family: any, index: number) => (
-          <Card key={index}>
-            <CardHeader>
-              <CardTitle className="text-lg">{family.family_name} ({family.category})</CardTitle>
-            </CardHeader>
-            <CardContent className="overflow-x-auto">
+          <div key={`${family.family_id}-${index}`}>
+            <div className="flex justify-between items-center p-2">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800">
+                  {family.family_name}
+                </h2>
+                <span className="text-xs font-medium text-gray-500">Subtotal: {family.subtotal.toFixed(2)}</span>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-100">
+                <thead>
                   <tr>
-                    {columns.map((col, idx) => (
-                      <th key={col.key} scope="col" className={`p-2 md:px-6 md:py-3 text-left text-xs font-medium text-gray-500 uppercase ${col.key === 'total' ? 'sticky right-0 bg-gray-100 z-10 shadow-[-4px_0_4px_-4px_rgba(0,0,0,0.1)]' : ''} ${idx === 0 ? 'min-w-[150px]' : 'min-w-[80px]'}`}>
+                    {columns.map(col => (
+                      <th key={col.key || col.id} scope="col" className="h-8 border px-2 text-left text-xs font-medium text-gray-500 uppercase min-w-[100px]">
                         {col.label}
                       </th>
                     ))}
@@ -188,35 +193,27 @@ const QuoteDetailPage: React.FC = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {family.items?.map((item: any, idx: number) => (
-                    <tr key={idx}>
+                    <tr key={item.id}>
                       {columns.map(col => (
-                        <td key={col.key} className={`p-2 md:px-6 md:py-4 whitespace-nowrap text-xs border-b ${col.key === 'total' ? 'sticky right-0 bg-white z-10 shadow-[-4px_0_4px_-4px_rgba(0,0,0,0.1)] text-right' : ''}`}>
+                        <td key={col.key || col.id} className="w-full border px-2 py-1.5 text-sm">
                           {renderCell(item, family, col.key)}
                         </td>
                       ))}
                     </tr>
                   ))}
-                  <tr className="bg-muted/50 font-medium">
-                    <td colSpan={Math.max(1, columns.length - 1)} className="p-2 md:px-6 md:py-4 text-right">Subtotal</td>
-                    <td className="p-2 md:px-6 md:py-4 text-right sticky right-0 bg-muted/50 z-10 shadow-[-4px_0_4px_-4px_rgba(0,0,0,0.1)]">{family.subtotal?.toFixed(2)}</td>
-                  </tr>
                 </tbody>
               </table>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ))}
       </div>
 
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex justify-between items-center text-xl font-bold">
-            <span>GRAND TOTAL</span>
-            <span>INR {details.total_amount?.toFixed(2)}</span>
-          </div>
-        </CardContent>
-      </Card>
-
-
+      <div className="mt-8 flex flex-col items-end gap-2 p-6 bg-white rounded-lg border shadow-sm">
+        <div className='flex justify-between w-full text-2xl font-bold'>
+          <span>GRAND TOTAL</span>
+          <span>INR {details.total_amount?.toFixed(2)}</span>
+        </div>
+      </div>
     </div>
   );
 };
