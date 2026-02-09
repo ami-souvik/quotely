@@ -257,8 +257,11 @@ export default function TemplatesPage() {
         if (!newTemplateName.trim()) return;
         setCreating(true);
         try {
-            // Default columns for new template (Updated per requirement)
-            const defaultCols = [
+            // Fetch custom product settings
+            const settings = await getProductSettings();
+
+            // Standard columns
+            const standardCols = [
                 { key: 'name', label: 'Item Name', type: 'text' },
                 { key: 'quantity', label: 'Quantity', type: 'number' },
                 { key: 'unit_type', label: 'Unit', type: 'text' },
@@ -266,9 +269,27 @@ export default function TemplatesPage() {
                 { key: 'total', label: 'Total', type: 'formula', formula: 'price * quantity' }
             ];
 
+            // Filter out system keys to get only custom columns
+            const systemKeys = ['name', 'price', 'family', 'qty', 'quantity', 'total', 'unit_type', 'unit'];
+            const customCols = settings
+                .filter(c => !systemKeys.includes(c.key))
+                .map(c => ({
+                    key: c.key,
+                    label: c.label,
+                    type: c.type,
+                    formula: c.formula
+                }));
+
+            // Combine: Name -> Custom Columns -> Rest of Standard Columns
+            const finalCols = [
+                standardCols[0], // Name
+                ...customCols,
+                ...standardCols.slice(1)
+            ];
+
             const newTmpl = await createTemplate({
                 name: newTemplateName,
-                columns: defaultCols
+                columns: finalCols
             });
 
             setTemplates([...templates, newTmpl]);
