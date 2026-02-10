@@ -360,16 +360,22 @@ export const QuotePDFDocument: React.FC<QuotePDFProps> = ({ quoteData, orgSettin
                         }
 
                         let width = '15%'; // default
-                        if (key === 'item' || key === 'name' || col.label === 'Item Name' || col.label === 'DESCRIPTION') {
-                            width = '35%';
-                        } else if (key === 'quantity' || key === 'qty' || key === 'unit_type') {
-                            width = '12%';
-                        } else if (key === 'total') {
-                            width = '20%';
-                        }
+                        let flexGrow = 1;
 
-                        // Adjust flexGrow based on importance
-                        const flexGrow = (key === 'name' || key === 'item' || key === 'description') ? 2 : 1;
+                        if (col.width) {
+                            width = `${col.width}%`;
+                            flexGrow = 0;
+                        } else {
+                            // Legacy defaults
+                            if (key === 'item' || key === 'name' || col.label === 'Item Name' || col.label === 'DESCRIPTION') {
+                                width = '35%';
+                                flexGrow = 2;
+                            } else if (key === 'quantity' || key === 'qty' || key === 'unit_type') {
+                                width = '12%';
+                            } else if (key === 'total') {
+                                width = '20%';
+                            }
+                        }
 
                         return {
                             textAlign: align as any,

@@ -136,6 +136,7 @@ interface ColumnConfig {
     isSystem: boolean;
     type?: 'text' | 'number' | 'formula';
     formula?: string;
+    width?: number;
 }
 
 interface SortableItemProps {
@@ -143,10 +144,11 @@ interface SortableItemProps {
     index: number;
     onToggle: (index: number, checked: boolean) => void;
     onLabelChange: (index: number, label: string) => void;
+    onWidthChange: (index: number, width: number) => void;
     onRemove: (index: number) => void;
 }
 
-function SortableItem({ col, index, onToggle, onLabelChange, onRemove }: SortableItemProps) {
+function SortableItem({ col, index, onToggle, onLabelChange, onWidthChange, onRemove }: SortableItemProps) {
     const {
         attributes,
         listeners,
@@ -173,21 +175,30 @@ function SortableItem({ col, index, onToggle, onLabelChange, onRemove }: Sortabl
                 className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
             // disabled={col.isSystem || ['name', 'price', 'quantity', 'unit_type', 'total'].includes(col.key)} // Core fields always checked? User didn't say always checked, but "show by default". Let's allow unchecking, but maybe warn. Actually user said "REMOVE these...", effectively setting new defaults.
             />
-            <div className="flex-1 grid grid-cols-2 gap-2 items-center">
-                <div className="flex flex-col">
-                    <label htmlFor={`col-${col.key}`} className="text-sm font-medium cursor-pointer select-none">
+            <div className="flex-1 grid grid-cols-12 gap-2 items-center">
+                <div className="col-span-4 flex flex-col">
+                    <label htmlFor={`col-${col.key}`} className="text-sm font-medium cursor-pointer select-none truncate" title={col.key}>
                         {col.key} <span className="text-xs text-muted-foreground ml-1">({col.type || 'text'})</span>
                     </label>
-                    {col.type === 'formula' && <span className="text-xs text-muted-foreground italic truncate">{col.formula}</span>}
+                    {col.type === 'formula' && <span className="text-xs text-muted-foreground italic truncate" title={col.formula}>{col.formula}</span>}
                 </div>
-                <div className="flex gap-2">
+                <div className="col-span-8 flex gap-2">
                     <Input
                         value={col.label}
                         onChange={(e) => onLabelChange(index, e.target.value)}
                         className="h-8 flex-1"
-                        placeholder="Column Label"
+                        placeholder="Label"
                     />
-                    {/* Allow removing CUSTOM added fields if needed? For now just toggle visibility via checkbox is simpler. */}
+                    <div className="relative w-24">
+                        <Input
+                            type="number"
+                            value={col.width || ''}
+                            onChange={(e) => onWidthChange(index, parseInt(e.target.value) || 0)}
+                            className="h-8 pr-6"
+                            placeholder="Width"
+                        />
+                        <span className="absolute right-2 top-1.5 text-xs text-muted-foreground">%</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -441,6 +452,12 @@ export default function TemplatesPage() {
         setColumns(newCols);
     };
 
+    const handleWidthChange = (index: number, val: number) => {
+        const newCols = [...columns];
+        newCols[index].width = val;
+        setColumns(newCols);
+    };
+
     if (loading && templates.length === 0) return <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>;
 
     return (
@@ -569,6 +586,7 @@ export default function TemplatesPage() {
                                                         index={index}
                                                         onToggle={handleToggle}
                                                         onLabelChange={handleLabelChange}
+                                                        onWidthChange={handleWidthChange}
                                                         onRemove={() => {/* Implement remove if needed */ }}
                                                     />
                                                 ))}
