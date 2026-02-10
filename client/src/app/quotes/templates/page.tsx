@@ -389,6 +389,20 @@ export default function TemplatesPage() {
                 }
             });
 
+            // Distribute widths if no valid widths exist (Legacy or new templates)
+            const hasValidWidths = finalColumns.some(c => c.selected && c.width && c.width > 0);
+            if (!hasValidWidths) {
+                const selectedCount = finalColumns.filter(c => c.selected).length;
+                if (selectedCount > 0) {
+                    const equalWidth = Math.floor(100 / selectedCount);
+                    finalColumns.forEach(c => {
+                        if (c.selected) {
+                            c.width = equalWidth;
+                        }
+                    });
+                }
+            }
+
             setColumns(finalColumns);
         } catch (err) {
             console.error(err);
@@ -612,6 +626,7 @@ export default function TemplatesPage() {
                             <div className="flex-1 border rounded bg-white shadow-sm overflow-hidden relative">
                                 <PDFViewer width="100%" height="100%" showToolbar={true}>
                                     <QuotePDFDocument
+                                        key={JSON.stringify(columns.filter(c => c.selected))}
                                         quoteData={DUMMY_QUOTE}
                                         orgSettings={orgData || FALLBACK_ORG}
                                         pdfSettings={{ columns: columns.filter(c => c.selected) }}
