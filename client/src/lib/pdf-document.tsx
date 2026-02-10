@@ -112,30 +112,33 @@ const styles = StyleSheet.create({
     },
     infoRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 2
+        justifyContent: 'space-between'
     },
     label: {
+        fontSize: 10,
         fontWeight: 'bold',
         textTransform: 'uppercase',
         width: 80,
     },
     value: {
+        fontSize: 10,
         flex: 1,
         textTransform: 'uppercase',
     },
     labelRight: {
-        width: 60,
+        fontSize: 10,
         fontWeight: 'bold',
-        textAlign: 'left'
+        textAlign: 'left',
+        width: 60
     },
     valueRight: {
+        fontSize: 10,
         width: 140,
         textAlign: 'right',
     },
     greeting: {
         marginTop: 20,
-        fontSize: 14,
+        fontSize: 10,
         lineHeight: 1.4
     },
 
@@ -144,9 +147,9 @@ const styles = StyleSheet.create({
         // marginTop: 15,
     },
     familyTitle: {
-        fontSize: 18,
+        fontSize: 14,
         fontWeight: 'bold',
-        marginBottom: 14,
+        marginBottom: 6,
         marginTop: 10,
     },
     table: {
@@ -155,32 +158,31 @@ const styles = StyleSheet.create({
     },
     tableHeader: {
         flexDirection: 'row',
-        borderTopWidth: 1,
+        borderTopWidth: 0.5,
         borderTopColor: '#333',
-        borderBottomWidth: 1,
+        borderBottomWidth: 0.5,
         borderBottomColor: '#333',
         backgroundColor: '#f9f9f9',
-        paddingVertical: 5,
+        paddingBottom: 3,
         alignItems: 'center',
     },
     tableRow: {
         flexDirection: 'row',
-        borderBottomWidth: 1,
+        borderBottomWidth: 0.5,
         borderBottomColor: '#eee',
-        paddingVertical: 5,
+        paddingBottom: 3,
     },
     th: {
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: 'bold',
     },
     td: {
-        fontSize: 11,
+        fontSize: 10,
     },
 
     // Totals
     summaryRow: {
         flexDirection: 'row',
-        paddingVertical: 3,
         backgroundColor: '#f9f9f9',
         marginTop: 0,
     },
@@ -190,7 +192,7 @@ const styles = StyleSheet.create({
         textAlign: 'right',
         marginTop: 30,
         padding: 10,
-        borderTopWidth: 2,
+        borderTopWidth: 1,
         borderTopColor: '#333',
     }
 });
@@ -286,7 +288,7 @@ export const QuotePDFDocument: React.FC<QuotePDFProps> = ({ quoteData, orgSettin
 
                 {/* Info Section (Customer Details) */}
                 <View style={styles.infoSection}>
-                    <Text style={{ fontSize: 14, lineHeight: 1.6, fontWeight: 'bold' }}>CUSTOMER DETAILS:</Text>
+                    <Text style={{ fontSize: 10, fontWeight: 'bold' }}>CUSTOMER DETAILS:</Text>
                     <View style={styles.infoRow}>
                         <Text style={styles.label}>NAME</Text>
                         <Text style={styles.value}>{customerName}</Text>
@@ -444,7 +446,7 @@ export const QuotePDFDocument: React.FC<QuotePDFProps> = ({ quoteData, orgSettin
                                     // We'll mimic the "colspan" behavior by using a full flex row with content justified to end.
 
                                     return (
-                                        <View style={{ borderTopWidth: 1, borderTopColor: '#333' }}>
+                                        <View style={{ borderTopWidth: 0.5, borderTopColor: '#333' }}>
                                             <View style={styles.summaryRow}>
                                                 <View style={{ flex: 1 }}></View>
                                                 <Text style={{ width: '30%', textAlign: 'right', fontWeight: 'bold', paddingRight: 4 }}>SUB TOTAL</Text>
