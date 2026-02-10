@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { getQuotes, deleteQuote, Quote, generatePdf, getPresignedUrl, getTemplates, Template } from '@/lib/api/quotes';
+import { deleteQuote, Quote, generatePdf, getPresignedUrl, getTemplates, Template } from '@/lib/api/quotes';
 import axios from 'axios';
 
 const AllQuotesPage: React.FC = () => {
@@ -42,7 +42,7 @@ const AllQuotesPage: React.FC = () => {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [activeQuoteId, setActiveQuoteId] = useState<string | null>(null);
-
+  console.log(templates);
   const fetchQuotes = async () => {
     try {
       setLoading(true);
@@ -60,6 +60,9 @@ const AllQuotesPage: React.FC = () => {
 
   useEffect(() => {
     fetchQuotes();
+    getTemplates().then((res) => {
+      setTemplates(res);
+    })
   }, []);
 
   useEffect(() => {
@@ -77,21 +80,13 @@ const AllQuotesPage: React.FC = () => {
     setProcessingId(quoteId);
     setPdfMode(mode);
     try {
-      const templates = await getTemplates().catch(() => []);
-      if (templates.length > 0) {
-        setTemplates(templates);
-        setSelectedTemplate(templates[0].id);
-        setActiveQuoteId(quoteId);
-        setShowTemplateDialog(true);
-        setProcessingId(null);
-        return;
-      }
-      await generatePdf(quoteId);
+      await generatePdf(quoteId, quotes.find((q) => q.SK === sk)?.template_id || '');
       const url = await getPresignedUrl(quoteId, mode === 'download');
       window.open(url, '_blank');
-      setProcessingId(null);
-    } catch (err) {
-      alert('Failed to process PDF.');
+    } catch (err: any) {
+      console.error("PDF action failed", err);
+      alert('Failed to generate PDF.');
+    } finally {
       setProcessingId(null);
     }
   };
@@ -169,6 +164,7 @@ const AllQuotesPage: React.FC = () => {
                 <TableHead>Customer</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Amount (INR)</TableHead>
+                <TableHead className="text-right">Template</TableHead>
                 <TableHead className="text-right">Created At</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -189,6 +185,9 @@ const AllQuotesPage: React.FC = () => {
                       </TableCell>
                       <TableCell className="text-right">
                         {quote.total_amount?.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {templates.find((t) => t.id === quote.template_id)?.name}
                       </TableCell>
                       <TableCell className="text-right">
                         {new Date(quote.created_at).toLocaleDateString()}
