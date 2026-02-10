@@ -372,7 +372,8 @@ export default function TemplatesPage() {
                         selected: col.selected !== false,
                         isSystem: def ? true : false,
                         type: col.type || (def ? def.type : 'text'),
-                        formula: col.formula || (def ? def.formula : '')
+                        formula: col.formula || (def ? def.formula : ''),
+                        width: col.width // Add this line
                     });
                     processedKeys.add(key);
                 });
