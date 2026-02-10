@@ -243,7 +243,7 @@ export default function TemplatesPage() {
         } else {
             setColumns([]);
         }
-    }, [selectedTemplateId, templates]); // Depend on templates too in case they are reloaded
+    }, [selectedTemplateId]); // Only reload when selection changes, not when template data updates (avoids overwrite on save)
 
     const fetchData = async () => {
         setLoading(true);
